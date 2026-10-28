@@ -1,5 +1,7 @@
 from asyncio import gather, iscoroutinefunction
 from html import escape
+
+from pyrogram.enums import ButtonStyle
 from re import findall, sub as re_sub
 from time import time
 
@@ -376,6 +378,25 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
         position="header",
         icon=icon("bolt"),
     )
+    if not Config.RICH_STATUS:
+        # text card: Cancel/Select of every task on the keyboard instead
+        for task in rich_tasks:
+            n = task["title"].split(".", 1)[0]
+            buttons.data_button(
+                btn_label("close", f"Cancel {n}"),
+                f"rcan {task['gid']}",
+                position="f_body",
+                style=ButtonStyle.DANGER,
+                icon=icon("close"),
+            )
+            if task["select"]:
+                buttons.data_button(
+                    btn_label("folder", f"Select {n}"),
+                    f"rsel {task['gid']}",
+                    position="f_body",
+                    style=ButtonStyle.PRIMARY,
+                    icon=icon("folder"),
+                )
     if len(tasks) > STATUS_LIMIT:
         buttons.data_button(
             btn_label("prev", "Prev"), f"status {sid} pre", position="header", icon=icon("prev")

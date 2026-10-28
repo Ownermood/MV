@@ -80,6 +80,7 @@ from ..helper.mirror_leech_utils.download_utils.telegram_download import (
 )
 from ..helper.telegram_helper.button_build import ButtonMaker
 from ..helper.telegram_helper.bot_commands import BotCommands
+from ..helper.telegram_helper.error_report import report_task_error
 from ..helper.telegram_helper.message_utils import (
     auto_delete_message,
     delete_links,
@@ -449,7 +450,7 @@ class Mirror(TaskListener):
         try:
             await self.before_start()
         except Exception as e:
-            await send_message(self.message, e)
+            await report_task_error(self, e)
             await self.remove_from_same_dir()
             await delete_links(self.message)
             return
@@ -482,7 +483,7 @@ class Mirror(TaskListener):
                 e = str(e)
                 LOGGER.info(e)
                 if e.startswith("ERROR:"):
-                    await send_message(self.message, e)
+                    await report_task_error(self, e)
                     await self.remove_from_same_dir()
                     await delete_links(self.message)
                     return
@@ -490,7 +491,7 @@ class Mirror(TaskListener):
             except Exception as e:
                 if self.is_cancelled:
                     return
-                await send_message(self.message, e)
+                await report_task_error(self, e)
                 await self.remove_from_same_dir()
                 await delete_links(self.message)
                 return
@@ -522,7 +523,7 @@ class Mirror(TaskListener):
             except Exception as e:
                 if self.is_cancelled:
                     return
-                await send_message(self.message, e)
+                await report_task_error(self, e)
                 await self.remove_from_same_dir()
                 await delete_links(self.message)
                 return
@@ -557,12 +558,12 @@ class Mirror(TaskListener):
                     e = str(e)
                     LOGGER.info(e)
                     if e.startswith("ERROR:"):
-                        await send_message(self.message, e)
+                        await report_task_error(self, e)
                         await self.remove_from_same_dir()
                         await delete_links(self.message)
                         return
                 except Exception as e:
-                    await send_message(self.message, e)
+                    await report_task_error(self, e)
                     await self.remove_from_same_dir()
                     await delete_links(self.message)
                     return
@@ -575,7 +576,7 @@ class Mirror(TaskListener):
                 except Exception as e:
                     if self.is_cancelled:
                         return
-                    await send_message(self.message, e)
+                    await report_task_error(self, e)
                     await self.remove_from_same_dir()
                     await delete_links(self.message)
                     return
@@ -599,12 +600,12 @@ class Mirror(TaskListener):
                     if "This link requires a password!" not in e:
                         LOGGER.info(e)
                     if e.startswith("ERROR:"):
-                        await send_message(self.message, e)
+                        await report_task_error(self, e)
                         await self.remove_from_same_dir()
                         await delete_links(self.message)
                         return
                 except Exception as e:
-                    await send_message(self.message, e)
+                    await report_task_error(self, e)
                     await self.remove_from_same_dir()
                     await delete_links(self.message)
                     return

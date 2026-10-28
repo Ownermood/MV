@@ -96,7 +96,12 @@ for prem in (False, True):
     ok &= good
     print(f"{'PASS' if good else 'FAIL'} rich card premium={prem}: {len(data)} bytes TL, cancel+select buttons, styles")
 Cfg.RICH_STATUS = False
-msg, _ = asyncio.run(su.get_readable_message(1, False))
+msg, btn = asyncio.run(su.get_readable_message(1, False))
 good = msg.rich is None; ok &= good
 print(f"{'PASS' if good else 'FAIL'} RICH_STATUS off -> no rich version")
+rows = [[(b.text, b.callback_data, b.style.name) for b in row] for row in btn.inline_keyboard]
+flat = [x for r in rows for x in r]
+good = ("Cancel 1", "rcan e90c669b", "DANGER") in [(t.split()[-2] + " " + t.split()[-1], d, st) for t, d, st in flat if "Cancel" in t] and any(d == "rsel e90c669b" for _, d, _ in flat) and any("Refresh" in t for t, _, _ in flat)
+ok &= good
+print(f"{'PASS' if good else 'FAIL'} text card has red Cancel / blue Select per task on the keyboard: {rows}")
 print("ALL PASS" if ok else "SOME FAILED")

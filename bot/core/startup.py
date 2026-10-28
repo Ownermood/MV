@@ -258,30 +258,38 @@ async def load_settings():
             LOGGER.info("RSS data has been imported from MongoDB")
 
 
-# switched on once per bot (DEFAULTS_VERSION); changes made later in the panel stay
+# recommended settings, applied once per bot and version (DEFAULTS_VERSION);
+# changes made later in the panel stay
 RECOMMENDED_DEFAULTS = {
-    "BOT_PM": True,
-    "MEDIA_GROUP": True,
-    "EQUAL_SPLITS": True,
-    "LEECH_SECTIONS": True,
-    "PREMIUM_EMOJI": True,
-    "RICH_STATUS": True,
-    "INC_TASK_NOTIFY": True,
+    1: {
+        "BOT_PM": True,
+        "MEDIA_GROUP": True,
+        "EQUAL_SPLITS": True,
+        "LEECH_SECTIONS": True,
+        "PREMIUM_EMOJI": True,
+        "INC_TASK_NOTIFY": True,
+    },
+    # the rich card loses premium emoji when Telegram re-sends/edits it; the
+    # text card keeps them and has Cancel/Select on its keyboard
+    2: {"RICH_STATUS": False},
 }
-DEFAULTS_VERSION = 1
 
 
 async def apply_recommended_defaults():
-    if Config.DEFAULTS_VERSION >= DEFAULTS_VERSION:
+    changes = {}
+    for version, values in sorted(RECOMMENDED_DEFAULTS.items()):
+        if Config.DEFAULTS_VERSION < version:
+            changes.update(values)
+            Config.DEFAULTS_VERSION = version
+    if not changes:
         return
-    for key, value in RECOMMENDED_DEFAULTS.items():
+    for key, value in changes.items():
         Config.set(key, value)
-    Config.DEFAULTS_VERSION = DEFAULTS_VERSION
     if database.db is not None:
         await database.update_config(
-            {**RECOMMENDED_DEFAULTS, "DEFAULTS_VERSION": DEFAULTS_VERSION}
+            {**changes, "DEFAULTS_VERSION": Config.DEFAULTS_VERSION}
         )
-    LOGGER.info(f"Recommended settings switched on: {', '.join(RECOMMENDED_DEFAULTS)}")
+    LOGGER.info(f"Recommended settings applied: {changes}")
 
 
 async def save_settings():

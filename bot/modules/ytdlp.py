@@ -26,6 +26,7 @@ from ..helper.mirror_leech_utils.download_utils.yt_dlp_download import (
     get_cookie_file,
 )
 from ..helper.telegram_helper.button_build import ButtonMaker
+from ..helper.telegram_helper.error_report import report_task_error
 from ..helper.telegram_helper.message_utils import (
     auto_delete_message,
     delete_links,
@@ -523,7 +524,7 @@ class YtDlp(TaskListener):
         try:
             await self.before_start()
         except Exception as e:
-            await send_message(self.message, e)
+            await report_task_error(self, e)
             await self.remove_from_same_dir()
             await delete_links(self.message)
             return
@@ -552,7 +553,7 @@ class YtDlp(TaskListener):
             result = await sync_to_async(extract_info, self.link, options)
         except Exception as e:
             msg = str(e).replace("<", " ").replace(">", " ")
-            await send_message(self.message, f"{self.tag} {msg}")
+            await report_task_error(self, msg)
             await self.remove_from_same_dir()
             await delete_links(self.message)
             return

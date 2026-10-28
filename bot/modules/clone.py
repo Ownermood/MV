@@ -57,6 +57,7 @@ from ..helper.mirror_leech_utils.telegram_utils.clone import (
 )
 from ..helper.telegram_helper.button_build import ButtonMaker
 from ..helper.telegram_helper.prompt import PromptUnreachable
+from ..helper.telegram_helper.error_report import report_task_error
 from ..helper.telegram_helper.message_utils import (
     TgSource,
     auto_delete_message,
@@ -181,7 +182,7 @@ class Clone(TaskListener):
         try:
             await self.before_start()
         except Exception as e:
-            await send_message(self.message, e)
+            await report_task_error(self, e)
             await delete_links(self.message)
             return
 
@@ -295,7 +296,7 @@ class Clone(TaskListener):
             except DirectDownloadLinkException as e:
                 LOGGER.error(str(e))
                 if str(e).startswith("ERROR:"):
-                    await send_message(self.message, str(e))
+                    await report_task_error(self, str(e))
                     return
         if is_gdrive_link(self.link) or is_gdrive_id(self.link):
             self.name, mime_type, self.size, files, _ = await sync_to_async(

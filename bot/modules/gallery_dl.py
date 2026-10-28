@@ -12,6 +12,7 @@ from ..helper.mirror_leech_utils.download_utils.gallery_dl_download import (
     GalleryDLHelper,
     sanitize_gallery_dl_options,
 )
+from ..helper.telegram_helper.error_report import report_task_error
 from ..helper.telegram_helper.message_utils import (
     auto_delete_message,
     delete_links,
@@ -241,7 +242,7 @@ class GalleryDL(TaskListener):
         try:
             await self.before_start()
         except Exception as e:
-            await send_message(self.message, e)
+            await report_task_error(self, e)
             await self.remove_from_same_dir()
             await delete_links(self.message)
             return

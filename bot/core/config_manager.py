@@ -75,7 +75,7 @@ class Config:
     START_IMAGE = ""
     START_GUIDE = True
     PREMIUM_EMOJI = True
-    RICH_STATUS = True
+    RICH_STATUS = False
     LEECH_SECTIONS = True
     # bumped when new recommended defaults are applied once (core.startup)
     DEFAULTS_VERSION = 0

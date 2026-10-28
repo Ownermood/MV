@@ -63,6 +63,7 @@ from ..mirror_leech_utils.upload_utils.telegram_uploader import TelegramUploader
 from ..mirror_leech_utils.youtube_utils.youtube_upload import YouTubeUpload
 from ..telegram_helper.button_build import ButtonMaker
 from ..telegram_helper.emoji import e
+from ..telegram_helper.error_report import report_error, report_task_error, short_reason
 from ..telegram_helper.message_utils import (
     delete_links,
     delete_message,
@@ -70,34 +71,6 @@ from ..telegram_helper.message_utils import (
     send_message,
     update_status_message,
 )
-
-
-# known errors -> what the user should read in the group
-_FRIENDLY_ERRORS = (
-    ("cannotDownloadFile", "The Drive owner has blocked downloads for this file."),
-    ("downloadQuotaExceeded", "Google's download limit for this file is reached. Try again later."),
-    ("userRateLimitExceeded", "Google rate limit reached. Try again in a while."),
-    ("storageQuotaExceeded", "The destination Drive is full."),
-    ("File not found", "File not found, or not shared with the bot's Google account."),
-    ("notFound", "File not found, or not shared with the bot's Google account."),
-    ("Google Drive is not set up", "Google Drive is not set up on this bot yet."),
-    ("NO TOKEN", "Google Drive is not set up on this bot yet."),
-)
-
-
-def short_reason(error):
-    text = " ".join(str(error).split())
-    for key, nice in _FRIENDLY_ERRORS:
-        if key.casefold() in text.casefold():
-            return nice
-    return text if len(text) <= 160 else text[:157] + "…"
-
-
-def _chat_ref(value):
-    value = str(value or "").strip()
-    if not value:
-        return None
-    return int(value) if value.lstrip("-").isdigit() else value
 
 
 class TaskListener(TaskConfig):
@@ -749,25 +722,14 @@ class TaskListener(TaskConfig):
                 f"<blockquote><b>Name:</b> {escape(self.name or '-')}\n"
                 f"<b>Reason:</b> {escape(str(error))}\n{details}</blockquote>"
             )
-            # the group only gets a short reason; details go to the log chat and DM
+            # full text to the DM and the log chat; the group stays clean
             msg = (
                 f"{e('warn')} <b>Task Stopped</b>\n"
                 f"<blockquote><b>Reason:</b> {escape(short_reason(error))}\n{details}</blockquote>"
             )
-            log_chat = _chat_ref(Config.ERROR_LOG_CHAT)
-            if log_chat and log_chat not in (self.message.chat.id, self.message.chat.username):
-                sent = await send_message(
-                    log_chat, f"{full}\n<a href='{self.message.link}'>Task message</a>"
-                    if self.is_super_chat else full,
-                )
-                if isinstance(sent, str):
-                    LOGGER.warning(f"ERROR_LOG_CHAT {log_chat} not reachable (make the bot admin there): {sent}")
-            elif log_chat:
-                LOGGER.warning("ERROR_LOG_CHAT is the task's own chat; full errors are not posted there")
-            if self.bot_pm and self.is_super_chat:
-                await send_message(self.user_id, full)
-
-        await send_message(self.message, msg, button)
+            await report_error(self, full, msg, button)
+        else:
+            await report_error(self, msg, msg, button)
         await delete_links(self.message)
         if count == 0:
             await self.clean()
@@ -806,10 +768,7 @@ class TaskListener(TaskConfig):
             if self.mid in task_dict:
                 del task_dict[self.mid]
             count = len(task_dict)
-        await send_message(
-            self.message,
-            f"{e('warn')} <b>Upload failed</b>\n<blockquote>{escape(str(error))}\n<b>User:</b> {self.tag}</blockquote>",
-        )
+        await report_task_error(self, error, title="Upload failed")
         await delete_links(self.message)
         if count == 0:
             await self.clean()
