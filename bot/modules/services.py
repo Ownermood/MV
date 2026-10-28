@@ -85,7 +85,10 @@ def _start_links(buttons, lang):
     for label_, url in links.items():
         buttons.url_button(str(label_), str(url), "f_body")
     if not links:
-        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL, "f_body")
+        # no custom links: show the force join chats (channel + bot group)
+        for chat in fsub_chats():
+            if chat["name"] and chat["link"]:
+                buttons.url_button(chat["name"], chat["link"], "f_body")
 
 
 def view_only(user_id, chat):
@@ -114,7 +117,7 @@ def start_home(user, view=False):
     if view:
         text += (
             f"\n{e('chat')} <b>Downloads work only in our bot group</b> — "
-            "open it with the green button below and send your commands there."
+            "open it with the button below and send your commands there."
         )
         if Config.BOT_PM:
             text += "\n<i>Your files will also be sent to you here.</i>"

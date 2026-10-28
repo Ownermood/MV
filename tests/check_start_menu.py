@@ -8,7 +8,7 @@ mod("bot"); mod("bot.core"); mod("bot.core.config_manager", Config=Cfg); mod("bo
 spec = importlib.util.spec_from_file_location("bot.helper.telegram_helper.emoji", f"{REPO}/bot/helper/telegram_helper/emoji.py")
 em = importlib.util.module_from_spec(spec); sys.modules[spec.name] = em; spec.loader.exec_module(em)
 src = open(f"{REPO}/bot/modules/services.py").read(); tree = ast.parse(src)
-want = {"_cmd", "_guide_text", "GUIDE_BUTTONS", "_greeting", "start_body", "view_only"}
+want = {"_cmd", "_guide_text", "GUIDE_BUTTONS", "_greeting", "start_body", "view_only", "_start_links"}
 body = [n for n in tree.body if (isinstance(n, ast.FunctionDef) and n.name in want) or (isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") in want)]
 bc = ast.parse(open(f"{REPO}/bot/helper/telegram_helper/bot_commands.py").read())
 table = [ast.literal_eval(n.value) for n in ast.walk(bc) if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "_static_commands"][0]
@@ -45,4 +45,13 @@ cases = [(9, priv, True), (9, grp, False), (1, priv, False), (3, priv, False), (
 for uid, chat, want_ in cases:
     good = vo(uid, chat) == want_; ok &= good
     print(f"{'PASS' if good else 'FAIL'} view_only uid={uid} chat={getattr(chat, 'type', None)} -> {want_}")
+class BM:
+    def __init__(s): s.urls = []
+    def url_button(s, key, link, position=None, style=None, icon=None): s.urls.append((key, link, style))
+FS = [{"id": "-1", "name": "Villan Community", "link": "https://t.me/VillanCommunity"}, {"id": "-2", "name": "", "link": ""}]
+ns["fsub_chats"] = lambda: FS
+for links, want_ in (({"A": "https://a"}, [("A", "https://a", None)]), ({}, [("Villan Community", "https://t.me/VillanCommunity", None)])):
+    Cfg.START_LINKS = links; bm = BM(); ns["_start_links"](bm, None)
+    good = bm.urls == want_; ok &= good
+    print(f"{'PASS' if good else 'FAIL'} start links {links or 'empty -> force join chats'}: {bm.urls}")
 print("ALL PASS" if ok else "SOME FAILED")

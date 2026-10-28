@@ -58,6 +58,7 @@ from ..helper.ext_utils.bot_utils import (
     parse_dest,
 )
 from ..core.config_manager import Config, DEFAULT_CONFIG
+from ..helper.telegram_helper.emoji import e, icon, label as btn_label
 from ..core.tg_client import TgClient, db_partition_id
 from ..core.torrent_manager import TorrentManager
 from ..core.startup import update_qb_options, update_nzb_options, update_variables
@@ -123,16 +124,34 @@ def rich_text(*parts):
 async def get_buttons(key=None, edit_type=None, edit_mode=False):
     buttons = ButtonMaker()
     if key is None:
-        buttons.data_button("Config Variables", "botset var")
-        buttons.data_button("Module Settings", "botset setonoff")
-        buttons.data_button("Private Files", "botset private open")
-        buttons.data_button("Qbit Settings", "botset qbit")
-        buttons.data_button("Aria2c Settings", "botset aria")
-        buttons.data_button("Sabnzbd Settings", "botset nzb")
-        buttons.data_button("JDownloader Sync", "botset syncjd")
-        buttons.data_button("↩️ Admin Panel", "botset adminpanel")
-        buttons.data_button("Close", "botset close", style=ButtonStyle.DANGER)
-        msg = "Bot Settings:"
+        for name, text, data in (
+            ("gear", "Config Variables", "botset var"),
+            ("on", "Module Settings", "botset setonoff"),
+            ("key", "Private Files", "botset private open"),
+            ("download", "Qbit Settings", "botset qbit"),
+            ("bolt", "Aria2c Settings", "botset aria"),
+            ("server", "Sabnzbd Settings", "botset nzb"),
+            ("satellite", "JDownloader Sync", "botset syncjd"),
+        ):
+            buttons.data_button(btn_label(name, text), data, icon=icon(name))
+        buttons.data_button(
+            btn_label("back", "Admin Panel"),
+            "botset adminpanel",
+            "footer",
+            style=ButtonStyle.DANGER,
+            icon=icon("back"),
+        )
+        buttons.data_button(
+            btn_label("close", "Close"),
+            "botset close",
+            "footer",
+            style=ButtonStyle.DANGER,
+            icon=icon("close"),
+        )
+        msg = (
+            f"{e('gear')} <b>Bot Settings</b>\n"
+            "<blockquote>Pick a section below to change the bot's settings.</blockquote>"
+        )
     elif edit_type is not None:
         if edit_type == "ariavar":
             buttons.data_button("Back", "botset aria", style=ButtonStyle.PRIMARY)
@@ -479,7 +498,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
     else:
         msg = "Unknown option"
 
-    return msg, buttons.build_menu(1 if key is None else 2, lb_cols=8)
+    return msg, buttons.build_menu(2, lb_cols=8)
 
 
 async def update_buttons(message, key=None, edit_type=None, edit_mode=False):
