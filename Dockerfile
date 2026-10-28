@@ -1,4 +1,8 @@
-FROM mysterysd/wzmlx:wzadv
+# Third-party base image (from WZML-X), locked to a digest so a changed or
+# hijacked "wzadv" tag cannot silently replace what we build on.
+# To update: docker pull mysterysd/wzmlx:wzadv, check it, then put the new
+# digest from `docker inspect --format '{{index .RepoDigests 0}}'` here.
+FROM mysterysd/wzmlx:wzadv@sha256:1cb1de42b18361fa7babd7e4d6adef4be0138a7ef5b8126eef581dd3e1efd0bc
 # COPY --from=mysterysd/wzmlx:m-tools /usr/local /usr/local
 
 WORKDIR /usr/src/app

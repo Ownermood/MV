@@ -217,5 +217,7 @@ TorBox (key masked in errors), tl;dv (TLS verification on, token only sent to tl
   registry API, so they could not be read. Pinning blindly can break the build. To get them:
   `docker run --rm --entrypoint /wzvenv/bin/python mysterysd/wzmlx:wzadv -m pip freeze` and pin
   `requirements.txt` to that output.
-- The Docker base image is a third-party prebuilt image (`mysterysd/wzmlx:wzadv`).
+- The Docker base image is a third-party prebuilt image (`mysterysd/wzmlx:wzadv`). It is now locked to
+  digest `sha256:1cb1de42…0bc`, so a changed tag cannot slip in; the image contents are still the
+  upstream developer's. Full control needs our own base image.
 - Nothing here was run against live Telegram; checks use stubs (`python3 tests/run_checks.py`).
