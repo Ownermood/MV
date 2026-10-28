@@ -28,24 +28,147 @@ from ..helper.telegram_helper.message_utils import (
 )
 
 
+GUIDE_BUTTONS = (
+    ("📥 Leech", "leech"),
+    ("☁️ Mirror", "mirror"),
+    ("▶️ YouTube & Sites", "yt"),
+    ("🧲 Torrents", "torrent"),
+    ("⚙️ Settings & Tasks", "settings"),
+    ("❓ All Commands", "cmds"),
+)
+
+
+def _cmd(name):
+    cmds = getattr(BotCommands, f"{name}Command")
+    return f"/{cmds[0] if isinstance(cmds, list) else cmds}"
+
+
+def _greeting(user):
+    return (
+        f'👋 <b>Hey <a href="tg://user?id={user.id}">{escape(user.first_name or "there")}</a></b>'
+        f" (<code>{user.id}</code>)\n\n"
+    )
+
+
+def _start_links(buttons, lang):
+    links = Config.START_LINKS if isinstance(Config.START_LINKS, dict) else {}
+    for label, url in links.items():
+        buttons.url_button(str(label), str(url), "f_body")
+    if not links:
+        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL, "f_body")
+    # AGPL: users of the bot must be able to reach its source
+    buttons.url_button(lang.START_BUTTON1, "https://github.com/Ownermood/MV", "footer")
+
+
+def _home(user):
+    lang = Language()
+    buttons = ButtonMaker()
+    for label, page in GUIDE_BUTTONS:
+        buttons.data_button(label, f"guide {user.id} {page}")
+    _start_links(buttons, lang)
+    text = _greeting(user) + lang.START_MSG.format(
+        cmd=BotCommands.HelpCommand[0],
+        leech=BotCommands.LeechCommand[0],
+        mirror=BotCommands.MirrorCommand[0],
+        ytdl=BotCommands.YtdlCommand[0],
+    )
+    return text, buttons.build_menu(2)
+
+
+def _guide_text(page):
+    # kept short: on a photo message this is a caption (1024 chars max)
+    leech, mirror = _cmd("Leech"), _cmd("Mirror")
+    pages = {
+        "leech": f"""📥 <b>Leech — get files in Telegram</b>
+
+Send <code>{leech} link</code> or reply to a link/file with {leech}.
+
+<b>Handy options</b>
+├ <code>-n new name</code> → rename
+├ <code>-z</code> → zip  •  <code>-e</code> → unzip
+├ <code>-doc</code> / <code>-med</code> → send as file / media
+└ <code>-sp 2GB</code> → split size
+
+<b>Example</b>
+<code>{leech} https://site.com/file.zip -e</code>""",
+        "mirror": f"""☁️ <b>Mirror — save files to your cloud</b>
+
+Send <code>{mirror} link</code> or reply with {mirror}.
+Files go to Google Drive or rclone (set your own in {_cmd("UserSet")}).
+
+<b>Handy options</b>
+├ <code>-up rcl</code> → pick an rclone folder
+├ <code>-up gdl</code> → pick a Drive folder
+├ <code>-z</code> → zip  •  <code>-e</code> → unzip
+└ <code>-n new name</code> → rename
+
+Manage cloud files with {_cmd("RcloneFm")}.""",
+        "yt": f"""▶️ <b>YouTube &amp; 1000+ sites</b>
+
+<b>Video/audio</b>
+├ {_cmd("YtdlLeech")} <code>link</code> → to Telegram
+└ {_cmd("Ytdl")} <code>link</code> → to cloud
+A quality menu appears after you send it.
+
+<b>Images/galleries</b> (Instagram, Pixiv, Reddit…)
+├ {_cmd("GallerydlLeech")} <code>link</code>
+└ {_cmd("Gallerydl")} <code>link</code>
+
+Private videos need cookies: {_cmd("UserSet")} → YT-DLP.""",
+        "torrent": f"""🧲 <b>Torrents &amp; magnets</b>
+
+Send a magnet link or reply to a .torrent with:
+├ {leech} → to Telegram
+├ {_cmd("QbLeech")} → qBittorrent (choose files)
+└ {mirror} / {_cmd("QbMirror")} → to cloud
+
+<b>Handy options</b>
+├ <code>-s</code> → select files before download
+├ <code>-ad</code> / <code>-tb</code> → AllDebrid / TorBox (faster)
+└ {_cmd("Search")} <code>name</code> → search torrents""",
+        "settings": f"""⚙️ <b>Settings &amp; tasks</b>
+
+{_cmd("UserSet")} → your own settings: thumbnail, caption,
+leech type, rclone config, cookies, upload paths.
+
+<b>While a task runs</b>
+├ {_cmd("Status")} → progress of all tasks
+├ {_cmd("CancelTask")} <code>gid</code> → stop one task
+└ {_cmd("CancelAll")} → stop all your tasks
+
+{_cmd("Stats")} → bot and server info.""",
+        "cmds": f"""❓ <b>All commands</b>
+
+Send {_cmd("Help")} for the full list with every option.
+Type <b>/</b> in the chat to see the command menu.""",
+    }
+    return pages.get(page, pages["cmds"])
+
+
+@new_task
+async def guide_cb(_, query):
+    _, uid, page = query.data.split()
+    if int(uid) != query.from_user.id:
+        await query.answer("Send /start yourself to use this menu.", show_alert=True)
+        return
+    await query.answer()
+    if page == "home":
+        text, markup = _home(query.from_user)
+    else:
+        buttons = ButtonMaker()
+        buttons.data_button("🏠 Home", f"guide {uid} home")
+        text, markup = _guide_text(page), buttons.build_menu(1)
+    await edit_message(query.message, text, markup)
+
+
 @new_task
 async def start(_, message):
     userid = message.from_user.id
     lang = Language()
     buttons = ButtonMaker()
-    links = Config.START_LINKS if isinstance(Config.START_LINKS, dict) else {}
-    for label, url in links.items():
-        buttons.url_button(str(label), str(url))
-    if not links:
-        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL)
-    # AGPL: users of the bot must be able to reach its source
-    buttons.url_button(lang.START_BUTTON1, "https://github.com/Ownermood/MV", "footer")
+    _start_links(buttons, lang)
     reply_markup = buttons.build_menu(2)
-    user = message.from_user
-    greeting = (
-        f'👋 <b>Hey <a href="tg://user?id={userid}">{escape(user.first_name or "there")}</a></b>'
-        f" (<code>{userid}</code>)\n\n"
-    )
+    greeting = _greeting(message.from_user)
 
     if len(message.command) > 1 and message.command[1] == "wzmlx":
         await delete_message(message)
@@ -95,15 +218,8 @@ async def start(_, message):
             return await send_message(message, msg, reply_markup)
 
     if await CustomFilters.authorized(_, message):
-        start_string = lang.START_MSG.format(
-            cmd=BotCommands.HelpCommand[0],
-            leech=BotCommands.LeechCommand[0],
-            mirror=BotCommands.MirrorCommand[0],
-            ytdl=BotCommands.YtdlCommand[0],
-        )
-        await send_message(
-            message, greeting + start_string, reply_markup, photo="IMAGES"
-        )
+        text, markup = _home(message.from_user)
+        await send_message(message, text, markup, photo="IMAGES")
     elif Config.BOT_PM:
         await send_message(
             message,
