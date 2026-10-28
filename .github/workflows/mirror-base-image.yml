@@ -1,0 +1,43 @@
+name: Mirror base image to GHCR
+
+# Copies the locked WZML-X base image (all architectures, same digest) to
+# ghcr.io/<owner>/villanbot-base so builds keep working if the Docker Hub
+# image is changed or removed. Runs when this file changes, or manually.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/mirror-base-image.yml
+
+env:
+  SOURCE: mysterysd/wzmlx:wzadv@sha256:1cb1de42b18361fa7babd7e4d6adef4be0138a7ef5b8126eef581dd3e1efd0bc
+  DIGEST: sha256:1cb1de42b18361fa7babd7e4d6adef4be0138a7ef5b8126eef581dd3e1efd0bc
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy image
+        run: |
+          target="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/villanbot-base"
+          docker buildx imagetools create --tag "$target:wzadv" --tag "$target:wzadv-${DIGEST:7:12}" "$SOURCE"
+          echo "TARGET=$target" >> "$GITHUB_ENV"
+
+      - name: Verify digest is unchanged
+        run: |
+          got=$(docker buildx imagetools inspect "$TARGET:wzadv" --format '{{json .Manifest}}' | jq -r .digest)
+          echo "source $DIGEST"
+          echo "copy   $got"
+          test "$got" = "$DIGEST"
+          echo "Use: BASE_IMAGE=$TARGET@$DIGEST"

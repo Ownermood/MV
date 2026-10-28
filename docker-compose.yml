@@ -24,7 +24,11 @@ services:
   #   restart: on-failure
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # set BASE_IMAGE in .env to use the GHCR copy of the base image
+        BASE_IMAGE: ${BASE_IMAGE:-mysterysd/wzmlx:wzadv@sha256:1cb1de42b18361fa7babd7e4d6adef4be0138a7ef5b8126eef581dd3e1efd0bc}
     command: bash start.sh
     restart: unless-stopped
     volumes:
