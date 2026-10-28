@@ -66,6 +66,7 @@ class Config:
     GD_DESP = "Uploaded with WZ Bot"
     AUTHOR_NAME = "Mirrorleach Villanbot"
     AUTHOR_URL = "https://t.me/Mirrorleach_Villanbot"
+    START_LINKS = {}
     INSTADL_API = ""
     IMDB_TEMPLATE = ""
     IMAGES = []

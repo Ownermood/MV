@@ -122,6 +122,7 @@ DEFAULT_DESP = {
     "GD_DESP": "Description for Google Drive uploads. Default: Uploaded with WZ Bot.",
     "AUTHOR_NAME": "Author name shown on Telegraph pages.",
     "AUTHOR_URL": "Author URL for Telegraph pages. Use channel URL for join button.",
+    "START_LINKS": "Buttons under the /start message as a dict of label to URL, e.g. {\"📢 Updates\": \"https://t.me/x\", \"💬 Support\": \"https://t.me/y\"}. Empty shows one Updates button to AUTHOR_URL.",
     "INSTADL_API": "Instagram downloader API key.",
     "IMDB_TEMPLATE": "Optional HTML template for IMDB results. If empty, uses Rich Messages.",
     "IMAGES": "List of image URLs or file_ids for the gallery. Managed via /addimage command.",

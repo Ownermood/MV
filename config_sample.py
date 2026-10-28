@@ -71,6 +71,7 @@ MEM_DEEP_STATS = False
 # Telegraph
 AUTHOR_NAME = "Mirrorleach Villanbot"
 AUTHOR_URL = "https://t.me/Mirrorleach_Villanbot"
+START_LINKS = {}  # /start buttons, e.g. {"📢 Updates": "https://t.me/x", "💬 Support": "https://t.me/y"}
 
 # Task Limits
 DIRECT_LIMIT = 0

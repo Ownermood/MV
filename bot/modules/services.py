@@ -33,11 +33,19 @@ async def start(_, message):
     userid = message.from_user.id
     lang = Language()
     buttons = ButtonMaker()
-    buttons.url_button(
-        lang.START_BUTTON1, "https://github.com/Ownermood/MV"
-    )
-    buttons.url_button(lang.START_BUTTON2, "https://t.me/Mirrorleach_Villanbot")
+    links = Config.START_LINKS if isinstance(Config.START_LINKS, dict) else {}
+    for label, url in links.items():
+        buttons.url_button(str(label), str(url))
+    if not links:
+        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL)
+    # AGPL: users of the bot must be able to reach its source
+    buttons.url_button(lang.START_BUTTON1, "https://github.com/Ownermood/MV", "footer")
     reply_markup = buttons.build_menu(2)
+    user = message.from_user
+    greeting = (
+        f'👋 <b>Hey <a href="tg://user?id={userid}">{escape(user.first_name or "there")}</a></b>'
+        f" (<code>{userid}</code>)\n\n"
+    )
 
     if len(message.command) > 1 and message.command[1] == "wzmlx":
         await delete_message(message)
@@ -89,19 +97,28 @@ async def start(_, message):
     if await CustomFilters.authorized(_, message):
         start_string = lang.START_MSG.format(
             cmd=BotCommands.HelpCommand[0],
+            leech=BotCommands.LeechCommand[0],
+            mirror=BotCommands.MirrorCommand[0],
+            ytdl=BotCommands.YtdlCommand[0],
         )
-        await send_message(message, start_string, reply_markup, photo="IMAGES")
+        await send_message(
+            message, greeting + start_string, reply_markup, photo="IMAGES"
+        )
     elif Config.BOT_PM:
         await send_message(
             message,
-            "<i>Now, Bot will send you all your files and links here. Start Using Now...</i>",
+            f"{greeting}<i>Now, Bot will send you all your files and links here. Start Using Now...</i>",
             reply_markup,
             photo="IMAGES",
         )
     else:
         await send_message(
             message,
-            "<i>Bot can mirror/leech from links|tgfiles|torrents|nzb|rclone-cloud to any rclone cloud, Google Drive or to telegram.\n\n⚠️ You are not an authorized user! Contact the owner of @Mirrorleach_Villanbot for access</i>",
+            f"{greeting}⚡ <b>Mirrorleach Villanbot</b>\n"
+            "<i>Mirror &amp; leech links, Telegram files, torrents, NZB and cloud drives "
+            "to Telegram, Google Drive or any rclone cloud.</i>\n\n"
+            "🔒 <b>You are not authorized yet.</b>\n"
+            f"Send your ID <code>{userid}</code> to the bot owner to get access.",
             reply_markup,
             photo="IMAGES",
         )
