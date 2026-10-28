@@ -2,7 +2,7 @@ from aioshutil import rmtree as aiormtree, move
 from asyncio import create_subprocess_exec, sleep, wait_for
 from asyncio.subprocess import PIPE
 from psutil import disk_usage
-from os import path as ospath, readlink, walk
+from os import path as ospath, readlink, unlink, walk
 from re import I, escape, search as re_search, split as re_split
 
 from aiofiles.os import (
@@ -154,6 +154,21 @@ async def clean_unwanted(opath):
 async def check_storage_threshold(size, threshold, io_task=False, alloc=False):
     free = (await sync_to_async(disk_usage, DOWNLOAD_DIR)).free
     return free >= (threshold + (size * (2 if io_task else 1) if not alloc else 0))
+
+
+def remove_escaping_links(root):
+    # Archives can carry symlinks (e.g. -> /usr/src/app/config.py). Uploads follow
+    # links, so drop any extracted link that resolves outside the extraction dir.
+    root_real = ospath.realpath(root)
+    for dirpath, dirnames, filenames in walk(root):
+        for name in dirnames + filenames:
+            link = ospath.join(dirpath, name)
+            if not ospath.islink(link):
+                continue
+            target = ospath.realpath(link)
+            if target != root_real and not target.startswith(root_real + ospath.sep):
+                unlink(link)
+                LOGGER.warning(f"Removed extracted link escaping {root}: {link}")
 
 
 async def get_path_size(opath):
@@ -397,6 +412,7 @@ class SevenZ:
             except Exception:
                 stderr = "Unable to decode the error!"
             LOGGER.error(f"{stderr}. Unable to extract archive!. Path: {f_path}")
+        await sync_to_async(remove_escaping_links, t_path)
         return code
 
     async def zip(self, dl_path, up_path, pswd):
