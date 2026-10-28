@@ -41,6 +41,11 @@ from ..helper.mirror_leech_utils.download_utils.alldebrid_resolver import (
     alldebrid_resolve_magnet,
     alldebrid_resolve_torrent,
 )
+from ..helper.mirror_leech_utils.download_utils.torbox_resolver import (
+    torbox_resolve,
+    torbox_resolve_magnet,
+    torbox_resolve_torrent,
+)
 from ..helper.mirror_leech_utils.download_utils.aria2_download import (
     add_aria2_download,
 )
@@ -154,6 +159,7 @@ class Mirror(TaskListener):
             "-bt": False,
             "-ut": False,
             "-ad": False,
+            "-tb": False,
             "-yt": False,
             "-seedr": False,
             "-i": 0,
@@ -232,6 +238,7 @@ class Mirror(TaskListener):
         self.bot_trans = args["-bt"]
         self.user_trans = args["-ut"]
         self.is_alldebrid = args["-ad"]
+        self.is_torbox = args["-tb"] and not self.is_alldebrid
         self.is_seedr = args["-seedr"] or self.is_seedr
         self.is_yt = args["-yt"]
 
@@ -472,6 +479,32 @@ class Mirror(TaskListener):
                 self.is_jd = False
                 self.is_qbit = False
 
+        if self.is_torbox and (is_magnet(self.link) or self.link.endswith(".torrent")):
+            try:
+                if is_magnet(self.link):
+                    LOGGER.info("TorBox magnet route")
+                    resolved = await torbox_resolve_magnet(
+                        self.link, is_cancelled=lambda: self.is_cancelled
+                    )
+                else:
+                    LOGGER.info(f"TorBox torrent file route: {self.link}")
+                    async with aiopen(self.link, "rb") as fh:
+                        torrent_bytes = await fh.read()
+                    resolved = await torbox_resolve_torrent(
+                        torrent_bytes,
+                        ospath.basename(self.link),
+                        is_cancelled=lambda: self.is_cancelled,
+                    )
+            except Exception as e:
+                await send_message(self.message, e)
+                await self.remove_from_same_dir()
+                await delete_links(self.message)
+                return
+            self._torbox_torrent_id = resolved.get("torbox_torrent_id", 0)
+            self.link = resolved
+            self.is_jd = False
+            self.is_qbit = False
+
         if (
             isinstance(self.link, str)
             and not self.is_jd
@@ -504,6 +537,18 @@ class Mirror(TaskListener):
                     await self.remove_from_same_dir()
                     await delete_links(self.message)
                     return
+            elif self.is_torbox:
+                try:
+                    resolved = await torbox_resolve(
+                        self.link, is_cancelled=lambda: self.is_cancelled
+                    )
+                except Exception as e:
+                    await send_message(self.message, e)
+                    await self.remove_from_same_dir()
+                    await delete_links(self.message)
+                    return
+                self._torbox_web_id = resolved.get("torbox_web_id", 0)
+                self.link = resolved
 
             if isinstance(self.link, str) and (
                 (content_type := await get_content_type(self.link)) is None

@@ -8,6 +8,7 @@ from ..helper.ext_utils.deprecations import Deprecations
 
 class Config:
     ALLDEBRID_API_KEY = ""
+    TORBOX_API_KEY = ""
     ALLDEBRID_NO_SEED_TIMEOUT = 180
     AS_DOCUMENT = False
     AUTHORIZED_CHATS = ""

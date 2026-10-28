@@ -682,6 +682,20 @@ class TaskListener(TaskConfig):
 
             await delete_magnet(magnet_id)
             self._alldebrid_magnet_id = 0
+        torbox_torrent_id = getattr(self, "_torbox_torrent_id", 0) or 0
+        torbox_web_id = getattr(self, "_torbox_web_id", 0) or 0
+        if torbox_torrent_id or torbox_web_id:
+            from ..mirror_leech_utils.download_utils.torbox_resolver import (
+                delete_torrent,
+                delete_web_download,
+            )
+
+            if torbox_torrent_id:
+                await delete_torrent(torbox_torrent_id)
+            if torbox_web_id:
+                await delete_web_download(torbox_web_id)
+            self._torbox_torrent_id = 0
+            self._torbox_web_id = 0
         msg = (
             f"""〶 <b><i><u>Limit Breached:</u></i></b>
 │

@@ -136,6 +136,9 @@ class TaskConfig:
         self.is_gallerydl = False
         self.is_alldebrid = False
         self._alldebrid_magnet_id = 0
+        self.is_torbox = False
+        self._torbox_torrent_id = 0
+        self._torbox_web_id = 0
         self.equal_splits = False
         self.transmission_mode = "bot"
         self.extract = False

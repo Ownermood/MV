@@ -326,6 +326,18 @@ entirely so dead torrents finish faster on a debrid plan.
 
 Requires <code>ALLDEBRID_API_KEY</code> in the bot configuration."""
 
+torbox_arg = """<b>TorBox Unlock</b>: -tb
+
+/cmd link -tb
+Routes web/filehost links through TorBox WebDL.
+
+Magnet/torrent inputs are also routed through TorBox when -tb is set:
+the bot uploads the magnet or replied <code>.torrent</code>, waits for
+TorBox to finish/cache it, then downloads each file from TorBox CDN links.
+If both -ad and -tb are given, AllDebrid is used.
+
+Requires <code>TORBOX_API_KEY</code> in the bot configuration."""
+
 seedr_arg = """<b>Seedr Cloud</b>: -seedr
 
 /cmd magnet -seedr
@@ -472,6 +484,7 @@ MIRROR_HELP_DICT = {
     "FFmpeg-Cmds": ffmpeg_cmds,
     "Metadata": metadata,
     "AllDebrid": alldebrid_arg,
+    "TorBox": torbox_arg,
     "Seedr": seedr_arg,
 }
 
