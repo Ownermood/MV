@@ -92,7 +92,7 @@ for prem in (False, True):
     raw_msg = msg.rich.write()
     data = raw_msg.write()
     blob = repr(raw_msg)
-    good = len(data) > 200 and b"rcan e90c669b" in data and b"rsel e90c669b" in data and b"status 1 ref" in data and "PageBlockTable" not in blob and "Processed: " in blob and msg.keep_markup is False and "bg_danger=True" in blob and "bg_primary=True" in blob and ("TextCustomEmoji" in blob) == prem
+    good = len(data) > 200 and b"rcan e90c669b" in data and b"rsel e90c669b" in data and b"status 1 ref" in data and "PageBlockTable" not in blob and "Processed: " in blob and msg.keep_markup is False and "bg_danger=True" in blob and "bg_primary=True" in blob and ("TextCustomEmoji" in blob) == prem and not any("TextCustomEmoji" in part.split("type=")[0] for part in blob.split("TextButton(")[1:])
     ok &= good
     print(f"{'PASS' if good else 'FAIL'} rich card premium={prem}: {len(data)} bytes TL, cancel+select buttons, styles")
 Cfg.RICH_STATUS = False

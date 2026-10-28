@@ -33,7 +33,9 @@ def _emoji(name):
 
 def _button(icon_name, text, data, style):
     return raw.types.TextButton(
-        text=_concat(_emoji(icon_name), _plain(f" {text}")),
+        # plain text only: premium emoji inside rich buttons may be what makes
+        # Telegram drop the premium emoji of the whole card on edits
+        text=_concat(_plain(text)),
         type=raw.types.InlineButtonTypeCallback(data=data.encode()),
         style=raw.types.RichButtonStyle(**{f"bg_{style}": True}),
     )
