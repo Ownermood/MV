@@ -23,9 +23,9 @@ EMOJI = {
     "on": ("🔛", "5445279663809130789"),
     "off": ("📴", "5445349654596189741"),
     "users": ("🫂", "5445372439397691719"),
-    # the pack's "❌" (5445092669522996408) is drawn as a person icon, so close
-    # stays a normal emoji until a real cross icon id is known
-    "close": ("❌", ""),
+    # the pack's "❌" (5445092669522996408) is drawn as a person icon; the
+    # second 🚫 of the pack is used for close/cancel/stop instead
+    "close": ("❌", "5447385112612208213"),
     "link": ("🔗", "5447479640547428304"),
     "back": ("↩️", "5445362436418859744"),
     "prev": ("⬅️", "5447506720316225765"),
