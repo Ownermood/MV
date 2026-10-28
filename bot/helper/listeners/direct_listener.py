@@ -4,6 +4,7 @@ from aiohttp.client_exceptions import ClientError
 
 from ... import LOGGER
 from ...core.torrent_manager import TorrentManager, aria2_name
+from ..ext_utils.bot_utils import safe_path_name
 
 
 class DirectListener:
@@ -38,11 +39,16 @@ class DirectListener:
         for content in contents:
             if self.listener.is_cancelled:
                 break
-            if content["path"]:
-                self._a2c_opt["dir"] = f"{self._path}/{content['path']}"
-            else:
-                self._a2c_opt["dir"] = self._path
+            # path/filename come from remote hosts and debrid APIs: keep them inside the task dir
+            rel = "/".join(
+                p
+                for p in str(content["path"] or "").replace("\\", "/").split("/")
+                if p not in ("", ".", "..")
+            )
+            self._a2c_opt["dir"] = f"{self._path}/{rel}" if rel else self._path
             filename = content["filename"]
+            if filename:
+                filename = safe_path_name(filename) or "file"
             self._a2c_opt["out"] = filename
             try:
                 gid = await TorrentManager.aria2.addUri(

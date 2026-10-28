@@ -85,7 +85,11 @@ async def _call_api(method, url, params=None, data=None, files=None):
             response = await client.request(method, url, **kwargs)
             response.raise_for_status()
         except Exception as e:
-            raise DirectDownloadLinkException(f"ERROR: AllDebrid network error: {e}")
+            # requests-style errors include the full URL, which carries apikey=
+            err = str(e)
+            if api_key := (params or {}).get("apikey"):
+                err = err.replace(api_key, "***")
+            raise DirectDownloadLinkException(f"ERROR: AllDebrid network error: {err}")
         try:
             payload = response.json()
         except Exception as e:
