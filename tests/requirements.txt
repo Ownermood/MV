@@ -3,3 +3,4 @@ gallery-dl
 niquests
 aiofiles
 aioshutil
+wzgram

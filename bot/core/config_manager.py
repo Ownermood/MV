@@ -67,6 +67,11 @@ class Config:
     AUTHOR_NAME = "Mirrorleach Villanbot"
     AUTHOR_URL = "https://t.me/Mirrorleach_Villanbot"
     START_LINKS = {}
+    START_TEXT = ""
+    START_IMAGE = ""
+    START_GUIDE = True
+    START_SOURCE_BUTTON = False
+    PREMIUM_EMOJI = False
     INSTADL_API = ""
     IMDB_TEMPLATE = ""
     IMAGES = []

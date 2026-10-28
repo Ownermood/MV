@@ -18,6 +18,7 @@ from ..helper.ext_utils.db_handler import database
 from ..helper.languages import Language
 from ..helper.telegram_helper.bot_commands import BotCommands
 from ..helper.telegram_helper.button_build import ButtonMaker
+from ..helper.telegram_helper.emoji import e, icon, label
 from ..helper.telegram_helper.filters import CustomFilters
 from ..helper.telegram_helper.message_utils import (
     delete_message,
@@ -29,12 +30,12 @@ from ..helper.telegram_helper.message_utils import (
 
 
 GUIDE_BUTTONS = (
-    ("📥 Leech", "leech"),
-    ("☁️ Mirror", "mirror"),
-    ("▶️ YouTube & Sites", "yt"),
-    ("🧲 Torrents", "torrent"),
-    ("⚙️ Settings & Tasks", "settings"),
-    ("❓ All Commands", "cmds"),
+    ("download", "Leech", "leech"),
+    ("upload", "Mirror", "mirror"),
+    ("play", "YouTube & Sites", "yt"),
+    ("satellite", "Torrents", "torrent"),
+    ("gear", "Settings & Tasks", "settings"),
+    ("list", "All Commands", "cmds"),
 )
 
 
@@ -45,41 +46,61 @@ def _cmd(name):
 
 def _greeting(user):
     return (
-        f'👋 <b>Hey <a href="tg://user?id={user.id}">{escape(user.first_name or "there")}</a></b>'
+        f'{e("wave")} <b>Hey <a href="tg://user?id={user.id}">{escape(user.first_name or "there")}</a></b>'
         f" (<code>{user.id}</code>)\n\n"
     )
 
 
-def _start_links(buttons, lang):
-    links = Config.START_LINKS if isinstance(Config.START_LINKS, dict) else {}
-    for label, url in links.items():
-        buttons.url_button(str(label), str(url), "f_body")
-    if not links:
-        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL, "f_body")
-    # AGPL: users of the bot must be able to reach its source
-    buttons.url_button(lang.START_BUTTON1, "https://github.com/Ownermood/MV", "footer")
-
-
-def _home(user):
-    lang = Language()
-    buttons = ButtonMaker()
-    for label, page in GUIDE_BUTTONS:
-        buttons.data_button(label, f"guide {user.id} {page}")
-    _start_links(buttons, lang)
-    text = _greeting(user) + lang.START_MSG.format(
+def start_body(lang=None):
+    if Config.START_TEXT:
+        return Config.START_TEXT
+    lang = lang or Language()
+    return lang.START_MSG.format(
         cmd=BotCommands.HelpCommand[0],
         leech=BotCommands.LeechCommand[0],
         mirror=BotCommands.MirrorCommand[0],
         ytdl=BotCommands.YtdlCommand[0],
+        bolt=e("bolt"),
+        dl=e("download"),
+        ul=e("upload"),
+        play=e("play"),
+        cmds=e("list"),
     )
-    return text, buttons.build_menu(2)
+
+
+def start_photo():
+    return Config.START_IMAGE or "IMAGES"
+
+
+def _start_links(buttons, lang):
+    links = Config.START_LINKS if isinstance(Config.START_LINKS, dict) else {}
+    for label_, url in links.items():
+        buttons.url_button(str(label_), str(url), "f_body", ButtonStyle.PRIMARY)
+    if not links:
+        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL, "f_body", ButtonStyle.PRIMARY)
+    if Config.START_SOURCE_BUTTON:
+        buttons.url_button(
+            label("folder", "Source Code"), "https://github.com/Ownermood/MV", "footer", icon=icon("folder")
+        )
+
+
+def start_home(user):
+    lang = Language()
+    buttons = ButtonMaker()
+    if Config.START_GUIDE:
+        for name, text, page in GUIDE_BUTTONS:
+            buttons.data_button(
+                label(name, text), f"guide {user.id} {page}", icon=icon(name)
+            )
+    _start_links(buttons, lang)
+    return _greeting(user) + start_body(lang), buttons.build_menu(2)
 
 
 def _guide_text(page):
     # kept short: on a photo message this is a caption (1024 chars max)
     leech, mirror = _cmd("Leech"), _cmd("Mirror")
     pages = {
-        "leech": f"""📥 <b>Leech — get files in Telegram</b>
+        "leech": f"""{e("download")} <b>Leech — get files in Telegram</b>
 
 Send <code>{leech} link</code> or reply to a link/file with {leech}.
 
@@ -91,7 +112,7 @@ Send <code>{leech} link</code> or reply to a link/file with {leech}.
 
 <b>Example</b>
 <code>{leech} https://site.com/file.zip -e</code>""",
-        "mirror": f"""☁️ <b>Mirror — save files to your cloud</b>
+        "mirror": f"""{e("upload")} <b>Mirror — save files to your cloud</b>
 
 Send <code>{mirror} link</code> or reply with {mirror}.
 Files go to Google Drive or rclone (set your own in {_cmd("UserSet")}).
@@ -102,20 +123,20 @@ Files go to Google Drive or rclone (set your own in {_cmd("UserSet")}).
 ├ <code>-z</code> → zip  •  <code>-e</code> → unzip
 └ <code>-n new name</code> → rename
 
-Manage cloud files with {_cmd("RcloneFm")}.""",
-        "yt": f"""▶️ <b>YouTube &amp; 1000+ sites</b>
+{e("folder")} Manage cloud files with {_cmd("RcloneFm")}.""",
+        "yt": f"""{e("play")} <b>YouTube &amp; 1000+ sites</b>
 
 <b>Video/audio</b>
 ├ {_cmd("YtdlLeech")} <code>link</code> → to Telegram
 └ {_cmd("Ytdl")} <code>link</code> → to cloud
 A quality menu appears after you send it.
 
-<b>Images/galleries</b> (Instagram, Pixiv, Reddit…)
+{e("image")} <b>Images/galleries</b> (Instagram, Pixiv, Reddit…)
 ├ {_cmd("GallerydlLeech")} <code>link</code>
 └ {_cmd("Gallerydl")} <code>link</code>
 
-Private videos need cookies: {_cmd("UserSet")} → YT-DLP.""",
-        "torrent": f"""🧲 <b>Torrents &amp; magnets</b>
+{e("key")} Private videos need cookies: {_cmd("UserSet")} → YT-DLP.""",
+        "torrent": f"""{e("satellite")} <b>Torrents &amp; magnets</b>
 
 Send a magnet link or reply to a .torrent with:
 ├ {leech} → to Telegram
@@ -125,19 +146,19 @@ Send a magnet link or reply to a .torrent with:
 <b>Handy options</b>
 ├ <code>-s</code> → select files before download
 ├ <code>-ad</code> / <code>-tb</code> → AllDebrid / TorBox (faster)
-└ {_cmd("Search")} <code>name</code> → search torrents""",
-        "settings": f"""⚙️ <b>Settings &amp; tasks</b>
+└ {e("search")} {_cmd("Search")} <code>name</code> → search torrents""",
+        "settings": f"""{e("gear")} <b>Settings &amp; tasks</b>
 
 {_cmd("UserSet")} → your own settings: thumbnail, caption,
 leech type, rclone config, cookies, upload paths.
 
-<b>While a task runs</b>
+{e("chart")} <b>While a task runs</b>
 ├ {_cmd("Status")} → progress of all tasks
 ├ {_cmd("CancelTask")} <code>gid</code> → stop one task
 └ {_cmd("CancelAll")} → stop all your tasks
 
-{_cmd("Stats")} → bot and server info.""",
-        "cmds": f"""❓ <b>All commands</b>
+{e("server")} {_cmd("Stats")} → bot and server info.""",
+        "cmds": f"""{e("list")} <b>All commands</b>
 
 Send {_cmd("Help")} for the full list with every option.
 Type <b>/</b> in the chat to see the command menu.""",
@@ -153,10 +174,10 @@ async def guide_cb(_, query):
         return
     await query.answer()
     if page == "home":
-        text, markup = _home(query.from_user)
+        text, markup = start_home(query.from_user)
     else:
         buttons = ButtonMaker()
-        buttons.data_button("🏠 Home", f"guide {uid} home")
+        buttons.data_button(label("back", "Home"), f"guide {uid} home", icon=icon("back"))
         text, markup = _guide_text(page), buttons.build_menu(1)
     await edit_message(query.message, text, markup)
 
@@ -218,25 +239,25 @@ async def start(_, message):
             return await send_message(message, msg, reply_markup)
 
     if await CustomFilters.authorized(_, message):
-        text, markup = _home(message.from_user)
-        await send_message(message, text, markup, photo="IMAGES")
+        text, markup = start_home(message.from_user)
+        await send_message(message, text, markup, photo=start_photo())
     elif Config.BOT_PM:
         await send_message(
             message,
             f"{greeting}<i>Now, Bot will send you all your files and links here. Start Using Now...</i>",
             reply_markup,
-            photo="IMAGES",
+            photo=start_photo(),
         )
     else:
         await send_message(
             message,
-            f"{greeting}⚡ <b>Mirrorleach Villanbot</b>\n"
+            f"{greeting}{e('bolt')} <b>Mirrorleach Villanbot</b>\n"
             "<i>Mirror &amp; leech links, Telegram files, torrents, NZB and cloud drives "
             "to Telegram, Google Drive or any rclone cloud.</i>\n\n"
-            "🔒 <b>You are not authorized yet.</b>\n"
+            f"{e('blocked')} <b>You are not authorized yet.</b>\n"
             f"Send your ID <code>{userid}</code> to the bot owner to get access.",
             reply_markup,
-            photo="IMAGES",
+            photo=start_photo(),
         )
     await database.set_pm_users(userid)
 

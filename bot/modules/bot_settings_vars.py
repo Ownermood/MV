@@ -21,6 +21,9 @@ DEFAULT_VALUES = {
 
 BOOL_VARS = [
     "AS_DOCUMENT",
+    "START_GUIDE",
+    "START_SOURCE_BUTTON",
+    "PREMIUM_EMOJI",
     "AUTO_THUMBNAIL",
     "BOT_PM",
     "DELETE_LINKS",
@@ -123,6 +126,11 @@ DEFAULT_DESP = {
     "AUTHOR_NAME": "Author name shown on Telegraph pages.",
     "AUTHOR_URL": "Author URL for Telegraph pages. Use channel URL for join button.",
     "START_LINKS": "Buttons under the /start message as a dict of label to URL, e.g. {\"📢 Updates\": \"https://t.me/x\", \"💬 Support\": \"https://t.me/y\"}. Empty shows one Updates button to AUTHOR_URL.",
+    "START_TEXT": "Custom welcome text shown under the greeting in /start (HTML). Empty uses the built-in text. Easier from /admin.",
+    "START_IMAGE": "Welcome photo for /start: an image URL or Telegram file_id. Empty uses IMAGES or no photo. Easier from /admin.",
+    "START_GUIDE": "Show the guide buttons (Leech, Mirror, ...) under /start. Default: True.",
+    "START_SOURCE_BUTTON": "Show a Source Code button under /start. Default: False.",
+    "PREMIUM_EMOJI": "Use premium emoji in the UI. Needs Telegram Premium on the bot owner's account; turn on from /admin to test it first. Default: False.",
     "INSTADL_API": "Instagram downloader API key.",
     "IMDB_TEMPLATE": "Optional HTML template for IMDB results. If empty, uses Rich Messages.",
     "IMAGES": "List of image URLs or file_ids for the gallery. Managed via /addimage command.",

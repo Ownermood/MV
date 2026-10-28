@@ -552,6 +552,7 @@ def get_bot_commands():
         "GallerydlLeech": "[link] Leech gallery-dl supported image/media sites",
         "Clone": "[link] Clone files/folders to GDrive",
         "RcloneFm": "Rclone file manager: browse, storage, trash, rename, delete",
+        "Admin": "Admin panel: welcome, start buttons, broadcast (sudo)",
         "UserSet": "User personal settings",
         "ForceStart": "[gid/reply] Force start from queued task",
         "Count": "[link] Count no. of files/folders in GDrive",
@@ -638,6 +639,10 @@ def get_help_string():
         elif key == "Clone":
             help_lines.append(
                 f"{cmd_str} [drive_url]: Copy file/folder to Google Drive."
+            )
+        elif key == "Admin":
+            help_lines.append(
+                f"{cmd_str}: Admin panel — welcome text/image, start buttons, broadcast, premium emoji (Only Owner & Sudo)."
             )
         elif key == "RcloneFm":
             help_lines.append(

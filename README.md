@@ -56,6 +56,8 @@ Mirrorleach Villanbot is built for users who want a single bot stack that can mi
 | Debrid unlock | `-ad` (AllDebrid) and `-tb` (TorBox, `TORBOX_API_KEY`) for filehost links, magnets and `.torrent` files |
 | tl;dv recordings | `/mirror` or `/leech` a tldv.io meeting link to get the MP4 (`TLDV_TOKEN` or `-h authorization: Bearer TOKEN`) |
 | Rclone file manager | `/rcfm`: storage usage, empty trash, browse, folder size, rename, delete, mkdir, dedupe |
+| Admin panel | `/admin` (owner/sudo): welcome text, welcome image, start buttons, guide/source toggles, broadcast with preview, premium emoji test switch |
+| Guided /start | Interactive menu: Leech, Mirror, YouTube & Sites, Torrents, Settings & Tasks, All Commands |
 
 ## How It Runs
 

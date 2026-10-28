@@ -4,6 +4,7 @@ from secrets import token_hex
 
 from pyrogram.errors import FloodWait, InputUserDeactivated, UserIsBlocked
 
+from .. import LOGGER
 from ..core.config_manager import Config
 from ..core.tg_client import TgClient
 from ..helper.ext_utils.bot_utils import new_task
@@ -149,52 +150,61 @@ async def broadcast(_, message):
     elif edited:
         return await edit_broadcast(bc_id, message, rply)
 
-    # Broadcasting logic
-    start_time = time()
-    status = """⌬  <b><i>Broadcast Stats :</i></b>
+    await run_broadcast(rply, message, forwarded, quietly)
+
+
+BC_STATUS = """⌬  <b><i>Broadcast Stats :</i></b>
 ┠ <b>Total Users:</b> <code>{t}</code>
 ┠ <b>Success:</b> <code>{s}</code>
 ┠ <b>Blocked Users:</b> <code>{b}</code>
 ┠ <b>Deleted Accounts:</b> <code>{d}</code>
 ┖ <b>Unsuccess Attempt:</b> <code>{u}</code>"""
+
+
+async def _send_one(rply, uid, forwarded, quietly):
+    if forwarded:
+        return await rply.forward(uid, disable_notification=quietly)
+    return await rply.copy(uid, disable_notification=quietly)
+
+
+async def run_broadcast(rply, reply_to, forwarded=False, quietly=False):
+    """Copy (or forward) rply to every PM user; live stats are posted in reply to reply_to."""
+    start_time = time()
     updater = time()
     bc_hash, bc_msgs = token_hex(5), []
-    pls_wait = await send_message(message, status.format(t=0, s=0, b=0, d=0, u=0))
+    pls_wait = await send_message(reply_to, BC_STATUS.format(t=0, s=0, b=0, d=0, u=0))
     t, s, b, d, u = 0, 0, 0, 0, 0
     for uid in await database.get_pm_uids():
         bc_msg = None
-        try:
-            bc_msg = (
-                await rply.forward(uid, disable_notification=quietly)
-                if forwarded
-                else await rply.copy(uid, disable_notification=quietly)
-            )
-            s += 1
-        except FloodWait as e:
-            await sleep(e.value * 1.1)
-            bc_msg = (
-                await rply.forward(uid, disable_notification=quietly)
-                if forwarded
-                else await rply.copy(uid, disable_notification=quietly)
-            )
-            s += 1
-        except UserIsBlocked:
-            await database.rm_pm_user(uid)
-            b += 1
-        except InputUserDeactivated:
-            await database.rm_pm_user(uid)
-            d += 1
-        except Exception as e:
-            print(f"Error broadcasting message to user {uid}: {e}")
-            u += 1
+        for attempt in range(2):
+            try:
+                bc_msg = await _send_one(rply, uid, forwarded, quietly)
+                s += 1
+            except FloodWait as e:
+                # one retry after the wait; a second flood counts as a failure
+                if attempt == 0:
+                    await sleep(e.value * 1.1)
+                    continue
+                u += 1
+            except UserIsBlocked:
+                await database.rm_pm_user(uid)
+                b += 1
+            except InputUserDeactivated:
+                await database.rm_pm_user(uid)
+                d += 1
+            except Exception as e:
+                LOGGER.error(f"Error broadcasting message to user {uid}: {e}")
+                u += 1
+            break
         if bc_msg:
             bc_msgs.append((uid, bc_msg.id))
         t += 1
         if (time() - updater) > 10:
-            await edit_message(pls_wait, status.format(t=t, s=s, b=b, d=d, u=u))
+            await edit_message(pls_wait, BC_STATUS.format(t=t, s=s, b=b, d=d, u=u))
             updater = time()
     bc_cache[bc_hash] = bc_msgs
     await edit_message(
         pls_wait,
-        f"{status.format(t=t, s=s, b=b, d=d, u=u)}\n\n<b>Elapsed Time:</b> <code>{get_readable_time(time() - start_time)}</code>\n<b>Broadcast ID:</b> <code>{bc_hash}</code>",
+        f"{BC_STATUS.format(t=t, s=s, b=b, d=d, u=u)}\n\n<b>Elapsed Time:</b> <code>{get_readable_time(time() - start_time)}</code>\n<b>Broadcast ID:</b> <code>{bc_hash}</code>",
     )
+    return bc_hash

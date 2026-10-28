@@ -54,6 +54,7 @@ class BotCommands:
         "BlackList": ["blacklist", "bl"],
         "RmBlackList": ["rmblacklist", "rbl"],
         "BotSet": ["bsetting", "bs"],
+        "Admin": ["admin", "panel"],
         "UserSet": ["usetting", "us"],
         "LockSession": ["lockmysession", "lms"],
         "Select": ["select", "sel"],

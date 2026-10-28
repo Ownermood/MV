@@ -72,6 +72,11 @@ MEM_DEEP_STATS = False
 AUTHOR_NAME = "Mirrorleach Villanbot"
 AUTHOR_URL = "https://t.me/Mirrorleach_Villanbot"
 START_LINKS = {}  # /start buttons, e.g. {"📢 Updates": "https://t.me/x", "💬 Support": "https://t.me/y"}
+START_TEXT = ""  # custom welcome text under the greeting (HTML); empty = built-in
+START_IMAGE = ""  # welcome photo: URL or Telegram file_id; empty = IMAGES / none
+START_GUIDE = True  # show the guide buttons under /start
+START_SOURCE_BUTTON = False  # show a Source Code button under /start
+PREMIUM_EMOJI = False  # premium emoji in the UI; needs Telegram Premium on the bot owner's account
 
 # Task Limits
 DIRECT_LIMIT = 0

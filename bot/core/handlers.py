@@ -448,6 +448,16 @@ async def add_handlers():
     )
     TgClient.bot.add_handler(
         MessageHandler(
+            admin_panel,
+            filters=command(BotCommands.AdminCommand, case_sensitive=True)
+            & CustomFilters.sudo,
+        )
+    )
+    TgClient.bot.add_handler(
+        CallbackQueryHandler(admin_panel_cb, filters=regex("^adm ") & CustomFilters.sudo)
+    )
+    TgClient.bot.add_handler(
+        MessageHandler(
             change_category,
             filters=command(BotCommands.CategorySelectCommand)
             & CustomFilters.authorized,

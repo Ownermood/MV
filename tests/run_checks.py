@@ -37,6 +37,9 @@ CHECKS = [
     ("tl;dv downloader", "check_tldv.py", [REPO, "WORK"], tldv_setup),
     ("rclone file manager", "check_rcfm.py", [REPO, "WORK"], None),
     ("debrid resolve /cancel", "check_resolve_cancel.py", [REPO], None),
+    ("broadcast loop", "check_broadcast.py", [REPO], None),
+    ("/start + guide pages", "check_start_menu.py", [REPO], None),
+    ("admin panel", "check_admin_panel.py", [REPO], None),
 ]
 
 failed = []

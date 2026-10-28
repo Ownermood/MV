@@ -30,7 +30,7 @@ class ButtonMaker:
             "footer": [],
         }
 
-    def url_button(self, key, link, position=None, style=None):
+    def url_button(self, key, link, position=None, style=None, icon=None):
         safe = valid_url(link)
         if not safe:
             from ... import LOGGER
@@ -38,7 +38,9 @@ class ButtonMaker:
             LOGGER.warning(f"dropping button {key!r} with unusable url {link!r}")
             return
         self.buttons[position if position in self.buttons else "default"].append(
-            InlineKeyboardButton(text=key, url=safe, style=_btn_style(style))
+            InlineKeyboardButton(
+                text=key, url=safe, style=_btn_style(style), icon_custom_emoji_id=icon
+            )
         )
 
     def web_app_button(self, key, link, position=None, style=None):
@@ -48,9 +50,14 @@ class ButtonMaker:
             )
         )
 
-    def data_button(self, key, data, position=None, style=None):
+    def data_button(self, key, data, position=None, style=None, icon=None):
         self.buttons[position if position in self.buttons else "default"].append(
-            InlineKeyboardButton(text=key, callback_data=data, style=_btn_style(style))
+            InlineKeyboardButton(
+                text=key,
+                callback_data=data,
+                style=_btn_style(style),
+                icon_custom_emoji_id=icon,
+            )
         )
 
     def build_menu(self, b_cols=1, h_cols=8, fb_cols=2, lb_cols=2, f_cols=8):
