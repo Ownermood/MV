@@ -59,6 +59,16 @@ from ..helper.ext_utils.bot_utils import (
 )
 from ..core.config_manager import Config, DEFAULT_CONFIG
 from ..helper.telegram_helper.emoji import e, icon, label as btn_label
+from .bot_settings_sections import (
+    SECTIONS,
+    home_text,
+    page_buttons,
+    page_slice,
+    search_keys,
+    search_text,
+    section_keys,
+    section_text,
+)
 from ..core.tg_client import TgClient, db_partition_id
 from ..core.torrent_manager import TorrentManager
 from ..core.startup import update_qb_options, update_nzb_options, update_variables
@@ -124,8 +134,17 @@ def rich_text(*parts):
 async def get_buttons(key=None, edit_type=None, edit_mode=False):
     buttons = ButtonMaker()
     if key is None:
+        for sid, (name, title, _, _) in SECTIONS.items():
+            buttons.data_button(
+                btn_label(name, title), f"botset sec {sid} 1", icon=icon(name)
+            )
+        buttons.data_button(
+            btn_label("search", "Search"), "botset search", icon=icon("search")
+        )
+        buttons.data_button(
+            btn_label("list", "All Variables"), "botset var", icon=icon("list")
+        )
         for name, text, data in (
-            ("gear", "Config Variables", "botset var"),
             ("on", "Module Settings", "botset setonoff"),
             ("key", "Private Files", "botset private open"),
             ("download", "Qbit Settings", "botset qbit"),
@@ -148,10 +167,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
             style=ButtonStyle.DANGER,
             icon=icon("close"),
         )
-        msg = (
-            f"{e('gear')} <b>Bot Settings</b>\n"
-            "<blockquote>Pick a section below to change the bot's settings.</blockquote>"
-        )
+        msg = home_text()
     elif edit_type is not None:
         if edit_type == "ariavar":
             buttons.data_button("Back", "botset aria", style=ButtonStyle.PRIMARY)
@@ -237,8 +253,11 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
         buttons.data_button("Back", "botset back")
         buttons.data_button("Close", "botset close", style=ButtonStyle.DANGER)
         for x in range(0, len(all_keys), 10):
+            n = int(x / 10) + 1
             buttons.data_button(
-                f"{int(x / 10) + 1}", f"botset start var {x}", position="footer"
+                f"•{n}•" if x == start else f"{n}",
+                f"botset start var {x}",
+                position="footer",
             )
         msg = f"⌬ <b><u>Config Variables</u></b> | <b><u>Page: {int(start / 10) + 1}</b></u>"
     elif key == "setonoff":
@@ -1107,6 +1126,78 @@ async def event_handler(client, query, pfunc, rfunc, document=False):
         client.remove_handler(*handler)
 
 
+# chat id -> ("sec", section id, page) or ("search", query, page): where the
+# Back button of a variable returns to
+last_view = {}
+
+
+def _key_buttons(buttons, keys):
+    for k in keys:
+        buttons.data_button(k, f"botset editvar {k}")
+
+
+def _nav_footer(buttons):
+    buttons.data_button(
+        btn_label("back", "Back"), "botset back", "footer", icon=icon("back")
+    )
+    buttons.data_button(
+        btn_label("close", "Close"),
+        "botset close",
+        "footer",
+        style=ButtonStyle.DANGER,
+        icon=icon("close"),
+    )
+
+
+def section_page(chat_id, sid, page):
+    keys, page, pages = page_slice(section_keys(sid), page)
+    last_view[chat_id] = ("sec", sid, page)
+    buttons = ButtonMaker()
+    _key_buttons(buttons, keys)
+    if sid == "limits":
+        buttons.data_button(
+            btn_label("chart", "Size Limits Page"), "botset setlimit", "header", icon=icon("chart")
+        )
+    elif sid == "torrent":
+        buttons.data_button("Qbit Settings", "botset qbit", "header")
+        buttons.data_button("Aria2c Settings", "botset aria", "header")
+        buttons.data_button("Sabnzbd Settings", "botset nzb", "header")
+    page_buttons(buttons, pages, page, f"botset sec {sid} {{}}")
+    _nav_footer(buttons)
+    return section_text(sid, keys, page, pages), buttons.build_menu(2, lb_cols=8)
+
+
+def search_page(chat_id, query, page):
+    found = search_keys(query)
+    keys, page, pages = page_slice(found, page)
+    last_view[chat_id] = ("search", query, page)
+    buttons = ButtonMaker()
+    _key_buttons(buttons, keys)
+    buttons.data_button(
+        btn_label("search", "New Search"), "botset search", "header", icon=icon("search")
+    )
+    page_buttons(buttons, pages, page, "botset srch {}")
+    _nav_footer(buttons)
+    return search_text(query, keys, page, pages, len(found)), buttons.build_menu(2, lb_cols=8)
+
+
+def last_page(chat_id):
+    view = last_view.get(chat_id)
+    if not view:
+        return None
+    kind, ref, page = view
+    return (section_page if kind == "sec" else search_page)(chat_id, ref, page)
+
+
+@new_task
+async def search_input(_, message, pre_message):
+    handler_dict[message.chat.id] = False
+    query = " ".join(message.text.split())[:40]
+    await delete_message(message)
+    text, markup = search_page(message.chat.id, query, 1)
+    await edit_message(pre_message, text, markup)
+
+
 @new_task
 async def edit_bot_settings(client, query):
     data = query.data.split()
@@ -1139,10 +1230,43 @@ async def edit_bot_settings(client, query):
         await edit_message(message, text, markup)
     elif data[1] == "back":
         await query.answer()
+        handler_dict[message.chat.id] = False
         key = data[2] if len(data) == 3 else None
+        if key in ("var", "setlimit") and (page := last_page(message.chat.id)):
+            # a variable opened from a section or search goes back there
+            return await edit_message(message, *page)
         if key is None:
             globals()["start"] = 0
+            last_view.pop(message.chat.id, None)
         await update_buttons(message, key)
+    elif data[1] == "sec":
+        await query.answer()
+        if data[2] not in SECTIONS:
+            return
+        text, markup = section_page(message.chat.id, data[2], int(data[3]))
+        await edit_message(message, text, markup)
+    elif data[1] == "srch":
+        await query.answer()
+        view = last_view.get(message.chat.id)
+        if not view or view[0] != "search":
+            return await update_buttons(message)
+        text, markup = search_page(message.chat.id, view[1], int(data[2]))
+        await edit_message(message, text, markup)
+    elif data[1] == "search":
+        await query.answer()
+        buttons = ButtonMaker()
+        _nav_footer(buttons)
+        await edit_message(
+            message,
+            f"{e('search')} <b>Search settings</b>\n"
+            "<blockquote>Send a word from the name or the description, like "
+            "<code>split</code>, <code>drive</code>, <code>log</code> or <code>thumb</code>.</blockquote>\n"
+            "┖ <b>Time Left :</b> <code>60 sec</code>",
+            buttons.build_menu(2),
+        )
+        pfunc = partial(search_input, pre_message=message)
+        rfunc = partial(update_buttons, message)
+        await event_handler(client, query, pfunc, rfunc)
     elif data[1] == "syncjd":
         if not Config.JD_EMAIL or not Config.JD_PASS:
             await query.answer(
@@ -1169,6 +1293,9 @@ async def edit_bot_settings(client, query):
     ].startswith("nzbser"):
         if data[1] in ("nzbserver", "setlimit"):
             globals()["start"] = 0
+        if data[1] in ("var", "setlimit"):
+            # opened directly: a variable's Back returns to this list
+            last_view.pop(message.chat.id, None)
         await query.answer()
         await update_buttons(message, data[1])
     elif data[1] == "resetvar":

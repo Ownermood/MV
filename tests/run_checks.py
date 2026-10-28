@@ -44,6 +44,7 @@ CHECKS = [
     ("force join auto-verify", "check_auto_verify.py", [REPO], None),
     ("status card", "check_status_card.py", [REPO], None),
     ("video split into parts", "check_split.py", [REPO, "WORK"], None),
+    ("bot settings sections", "check_bsettings_sections.py", [REPO], None),
 ]
 
 failed = []
