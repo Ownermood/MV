@@ -146,7 +146,7 @@ async def main():
     await click("adm 7 home"); t("panel uses premium tags when on", "tg-emoji" in m.text and valid(m.text, m.markup))
     await click("adm 7 prem_tog"); t("premium off again", Cfg.PREMIUM_EMOJI is False)
     bmsg = Msg(text="Hello all"); pm_queue.append(bmsg); await click("adm 7 bc_new")
-    t("broadcast asks confirmation", "Confirm broadcast" in m.text and not bc_calls)
+    t("broadcast asks confirmation", "CONFIRM BROADCAST" in m.text and not bc_calls)
     await click("adm 7 bc_go 1"); t("broadcast sent silently", bc_calls == [(bmsg, True)] and "bc9" in m.text)
     await click("adm 7 bc_go 0"); t("no double send", len(bc_calls) == 1 and "Nothing to send" in m.text)
     fwd = Msg(); fwd.forward_origin = types.SimpleNamespace(chat=types.SimpleNamespace(id="-1001")); fwd.forward_from_chat = None
@@ -172,7 +172,7 @@ async def main():
     t("admins page: owner, config and panel admins", "Tommy" in m.text and "from config" in m.text and "<code>55</code>" in m.text and "owner" in m.text and valid(m.text, m.markup))
     t("only panel admins have remove buttons", [r[1] for r in m.markup if "adm_rm" in r[1]] == ["adm 7 adm_rm 123"])
     pm_queue.append(Msg(text="Tom B")); await click("adm 7 adm_name 123"); t("admin renamed", udata[123]["PANEL_NAME"] == "Tom B")
-    t("new admin gets a DM", any(u == 123 and "You are now an admin" in x and "Tommy" in x for u, x in Bot.dms))
+    t("new admin gets a DM", any(u == 123 and "now an <b>admin</b>" in x and "Congrats Tommy" in x for u, x in Bot.dms))
     pm_queue.append(Msg(text="Wifu 8494053059")); await click("adm 7 adm_add")
     t("'Name ID' in one message, ID unknown to the bot still works", udata[8494053059].get("SUDO") is True and udata[8494053059]["PANEL_NAME"] == "Wifu" and not pm_queue)
     t("prompt shows the Name ID example", any("Wifu 8494053059" in x for _, x, _ in sent))

@@ -175,19 +175,19 @@ def home_text():
         f"{e('search')} <b>Search</b> → find any setting by name or word",
     ]
     return (
-        f"{e('gear')} <b>Bot Settings</b>\n"
-        "<blockquote expandable>" + "\n".join(rows) + "</blockquote>\n"
-        "<i>Open a section: every setting shows what it does and if it is set.</i>"
+        f"{e('gear')} <b>BOT SETTINGS</b>\n\n"
+        "Everything in one place — pick a section below.\n"
+        "<blockquote expandable>" + "\n".join(rows) + "</blockquote>"
     )
 
 
 def section_text(sid, keys, page, pages):
     icon, title, about, _ = SECTIONS[sid]
     return (
-        f"{e(icon)} <b>{title} Settings</b>\n"
+        f"{e(icon)} <b>{title.upper()}</b>\n"
         f"<i>{about}</i>  ·  page {page}/{pages}\n\n"
         f"<blockquote expandable>{key_list_text(keys) or 'Nothing here.'}</blockquote>\n"
-        f"{e('info')} <i>Tap a setting below to view or change it.</i>"
+        "<i>Tap a setting to change it.</i>"
     )
 
 
@@ -201,5 +201,5 @@ def search_text(query, keys, page, pages, total):
     return (
         f"{e('search')} <b>Search:</b> <code>{escape(query)}</code> · {total} found · page {page}/{pages}\n\n"
         f"<blockquote expandable>{key_list_text(keys)}</blockquote>\n"
-        f"{e('info')} <i>Tap a setting below to view or change it.</i>"
+        "<i>Tap a setting to change it.</i>"
     )

@@ -30,7 +30,6 @@ from .broadcast import run_broadcast
 from .services import ensure_admin_menu, start_home, start_photo
 
 GREEN = ButtonStyle.SUCCESS
-LINE = "━━━━━━━━━━━━━━━━━━"
 pending_broadcast = {}
 
 
@@ -101,15 +100,18 @@ async def _home(uid):
         users = len(await database.get_pm_uids()) if Config.DATABASE_URL else "N/A"
     except Exception:
         users = "N/A"
+    role = "Owner" if uid == Config.OWNER_ID else "Admin"
     text = f"""{e("gem")} <b>ADMIN PANEL</b>
-<blockquote>{e("bolt")} <b>Mirror Leech Villan Bot</b> · <i>owner &amp; sudo only</i></blockquote>
+
+Role: <b>{role}</b>
 <blockquote expandable>{e("users")} <b>Users:</b> <code>{users}</code>
 {e("chart")} <b>Running tasks:</b> <code>{len(task_dict)}</code>
 {e("clock")} <b>Uptime:</b> <code>{get_readable_time(time() - bot_start_time)}</code>
 {e("users")} <b>Admins:</b> <code>{len(_admins()) - 1}</code>  ·  {e("globe")} <b>Groups:</b> <code>{len(_groups())}</code>
 {e("key")} <b>Force join chats:</b> <code>{len(fsub_chats())}</code>
 {e("star")} <b>Premium emoji:</b> {_onoff(Config.PREMIUM_EMOJI)}</blockquote>
-<i>Tap a section. Changes apply instantly and are saved.</i>"""
+
+Choose a section:"""
     b = ButtonMaker()
     _btn(b, uid, "users", "Access", "acc")
     _btn(b, uid, "wave", "Welcome Text", "text")
@@ -134,8 +136,8 @@ async def _text_page(uid, note=""):
         if Config.START_TEXT
         else "<i>Built-in text (bot description + quick start).</i>"
     )
-    text = f"""{e("wave")} <b>Welcome Text</b>
-{LINE}
+    text = f"""{e("wave")} <b>WELCOME TEXT</b>
+
 Shown under the greeting when someone sends /start.
 You can use bold, italic, links and premium emoji — just format your message in Telegram.
 
@@ -156,8 +158,8 @@ async def _img_page(uid, note=""):
         current = f"{e('image')} Random image from IMAGES"
     else:
         current = f"{e('off')} No image (text only)"
-    text = f"""{e("image")} <b>Welcome Image</b>
-{LINE}
+    text = f"""{e("image")} <b>WELCOME IMAGE</b>
+
 Photo sent with /start.
 
 <b>Current:</b> {current}{note}"""
@@ -175,8 +177,8 @@ async def _btns_page(uid, note=""):
         f"{i}. {escape(str(k))} → <code>{escape(str(v))}</code>"
         for i, (k, v) in enumerate(links.items(), 1)
     ) or "<i>None — the Force Join chats are shown as buttons.</i>"
-    text = f"""{e("link")} <b>Start Buttons</b>
-{LINE}
+    text = f"""{e("link")} <b>START BUTTONS</b>
+
 <b>Link buttons:</b>
 {rows}
 
@@ -191,8 +193,8 @@ async def _btns_page(uid, note=""):
 
 
 async def _bc_page(uid, note=""):
-    text = f"""{e("mail")} <b>Broadcast</b>
-{LINE}
+    text = f"""{e("mail")} <b>BROADCAST</b>
+
 Send any message (text, photo, video, file, with buttons or premium emoji) to everyone who started the bot.
 
 1. Tap <b>New Broadcast</b>
@@ -205,8 +207,8 @@ Send any message (text, photo, video, file, with buttons or premium emoji) to ev
 
 
 async def _prem_page(uid, note=""):
-    text = f"""{e("gem")} <b>Premium Emoji</b>
-{LINE}
+    text = f"""{e("gem")} <b>PREMIUM EMOJI</b>
+
 Animated premium emoji in /start, the guide and this panel.
 Telegram only shows them if <b>the bot owner's account has Telegram Premium</b>.
 Turning it on sends you a test message first; if Telegram rejects it, it stays off.
@@ -224,9 +226,9 @@ async def _fj_page(uid, note=""):
         f"{i}. <b>{escape(c['name'] or '(chat title)')}</b> — <code>{escape(c['id'])}</code>\n    {escape(c['link'] or '(auto link)')}"
         for i, c in enumerate(chats, 1)
     ) or "<i>None — everyone can use the bot.</i>"
-    text = f"""{e("key")} <b>Force Join</b>
-{LINE}
-Users must join these before they can use any command. Owner and sudo are never blocked.
+    text = f"""{e("key")} <b>FORCE JOIN</b>
+
+Users must join these before they can use any command. Owner and admins are never blocked.
 {e("warn")} Make the bot an <b>admin</b> in each channel (a member is enough in groups), otherwise it cannot check members and will not block anyone.
 
 <b>Chats:</b>
@@ -254,9 +256,10 @@ async def _grp_page(uid, note=""):
         f"{i}. <code>{cid}</code>{' <i>(from config)</i>' if cfg else ''}"
         for i, (cid, cfg) in enumerate(groups, 1)
     ) or "<i>None yet.</i>"
-    text = f"""{e("globe")} <b>Allowed Groups</b>
-{LINE}
-<blockquote>Members of these groups can use the bot <b>inside the group</b>. Anyone else who opens the bot gets <i>not authorized</i>. Owner and sudo always have access.</blockquote>
+    text = f"""{e("globe")} <b>ALLOWED GROUPS</b>
+
+Members of these groups can use the bot inside the group.
+<i>Owner and admins can always use it.</i>
 <b>Groups:</b>
 {rows}{note}"""
     b = ButtonMaker()
@@ -300,9 +303,9 @@ def _users():
 
 
 async def _acc_page(uid, note=""):
-    text = f"""{e("users")} <b>Access Control</b>
-{LINE}
-<blockquote>Who can manage the bot and who can use it.</blockquote>
+    text = f"""{e("users")} <b>ACCESS</b>
+
+Who runs the bot, and who can use it:
 {e("gem")} <b>Owner:</b> <code>{Config.OWNER_ID}</code>
 {e("users")} <b>Admins:</b> <code>{len(_admins()) - 1}</code>
 {e("globe")} <b>Allowed groups:</b> <code>{len(_groups())}</code>
@@ -323,9 +326,11 @@ async def _admins_page(uid, note=""):
         mark = e("gem") if src == "owner" else e("users")
         rows.append(f"{mark} <b>{name}</b> · <code>{cid}</code> · <i>{tag}</i>")
     owner = uid == Config.OWNER_ID
-    text = f"""{e("users")} <b>Admins</b>
-{LINE}
-<blockquote>Admins can use every command and this panel. Only the owner can add or remove them.</blockquote>
+    text = f"""{e("users")} <b>ADMINS</b>
+
+Admins can use every command and this panel.
+<i>Only the owner can add or remove them. Quick way: <code>/addadmin Name UserID</code></i>
+
 {chr(10).join(rows)}{note}"""
     b = ButtonMaker()
     if owner:
@@ -343,9 +348,11 @@ async def _usr_page(uid, note=""):
     rows = "\n".join(
         f"{e('star')} <b>{_name(cid) or 'User'}</b> · <code>{cid}</code>" for cid in users
     ) or "<i>None yet.</i>"
-    text = f"""{e("star")} <b>Allowed Users</b>
-{LINE}
-<blockquote>These users can use the bot anywhere, also in private chat. Group members do not need to be added here.</blockquote>
+    text = f"""{e("star")} <b>ALLOWED USERS</b>
+
+These people can use the bot anywhere, even in DM.
+<i>Group members don't need to be added. Quick way: <code>/adduser Name UserID</code></i>
+
 {rows}{note}"""
     b = ButtonMaker()
     for cid in users:
@@ -415,10 +422,9 @@ async def add_admin(cid, name=""):
     await _set_admin(cid, True)
     await _tell(
         cid,
-        f"{e('party')} <b>You are now an admin</b> of <b>Mirror Leech Villan Bot</b>!\n"
-        f"<blockquote>{e('gem')} Tag: <b>{_name(cid) or 'Admin'}</b>\n"
-        f"{e('users')} Added by the owner</blockquote>\n"
-        f"{e('gear')} Open /admin for the admin panel. All commands are in your menu now.",
+        f"{e('party')} <b>Congrats {_name(cid) or 'there'}!</b>\n\n"
+        f"You are now an <b>admin</b> of Mirror Leech Villan Bot {e('love')}\n"
+        f"<i>Tap /admin to open your panel.</i>",
     )
 
 
@@ -427,7 +433,7 @@ async def remove_admin(cid):
     if cid == Config.OWNER_ID or not user_data.get(cid, {}).get("SUDO"):
         return False
     await _set_admin(cid, False)
-    await _tell(cid, f"{e('info')} You are <b>no longer an admin</b> of <b>Mirror Leech Villan Bot</b>.")
+    await _tell(cid, f"{e('wave')} You are no longer an admin of Mirror Leech Villan Bot. Thanks for the help!")
     return True
 
 
@@ -753,7 +759,7 @@ async def admin_panel_cb(_, query):
         _btn(b, uid, "close", "Cancel", "bc", position="footer")
         return await edit_message(
             msg,
-            f"{e('warn')} <b>Confirm broadcast</b>\n{LINE}\nThe message you just sent will be copied to every user.",
+            f"{e('warn')} <b>CONFIRM BROADCAST</b>\n\nThe message you just sent will go to every user.",
             b.build_menu(2),
         )
     if action == "bc_go":

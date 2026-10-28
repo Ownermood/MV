@@ -541,35 +541,35 @@ def get_bot_commands():
     from ...core.plugin_manager import get_plugin_manager
 
     static_commands = {
-        "Mirror": "[link/file] Mirror to Upload Destination",
-        "QbMirror": "[magnet/torrent] Mirror to Upload Destination using qbit",
-        "Ytdl": "[link] Mirror YouTube, m3u8, Social Media and yt-dlp supported urls",
-        "UpHoster": "[link/file] Upload to DDL Servers",
-        "Leech": "[link/file] Leech files to Upload to Telegram",
-        "QbLeech": "[magnet/torrent] Leech files to Upload to Telegram using qbit",
-        "YtdlLeech": "[link] Leech YouTube, m3u8, Social Media and yt-dlp supported urls",
-        "Gallerydl": "[link] Mirror gallery-dl supported image/media sites",
-        "GallerydlLeech": "[link] Leech gallery-dl supported image/media sites",
-        "Clone": "[link] Clone files/folders to GDrive",
-        "RcloneFm": "Rclone file manager: browse, storage, trash, rename, delete",
-        "Admin": "Admin panel: welcome, start buttons, broadcast, admins (admins)",
-        "UserSet": "User personal settings",
-        "ForceStart": "[gid/reply] Force start from queued task",
-        "Count": "[link] Count no. of files/folders in GDrive",
-        "List": "[query] Search any Text which is available in GDrive",
-        "Search": "[query] Search torrents via Qbit Plugins",
-        "Select": "[gid/reply] Select files for NZB, Aria2, Qbit Tasks",
-        "Ping": "Ping Bot to test Response Speed",
-        "Status": "[id/me] Tasks Status of Bot",
-        "Stats": "Bot, OS, Repo & System full Statistics",
-        "Rss": "User RSS Management Settings",
-        "CancelAll": "Cancel all Tasks on the Bot",
-        "Help": "Detailed help usage of the WZ Bot",
-        "BotSet": "[ADMIN] Bot Management Settings",
-        "Log": "[ADMIN] Get Bot Logs for Internal Working",
-        "Memory": "[ADMIN] Memory usage, caches and an allocation profiler",
-        "Restart": "[ADMIN] Reboot bot",
-        "RestartSessions": "[ADMIN] Reboot User Sessions",
+        "Mirror": "Download a link/file and upload it to your cloud",
+        "QbMirror": "Torrent/magnet to your cloud",
+        "Ytdl": "YouTube & 1000+ sites to your cloud",
+        "UpHoster": "Upload to file hosting sites",
+        "Leech": "Download a link/file and get it in Telegram",
+        "QbLeech": "Torrent/magnet to Telegram",
+        "YtdlLeech": "YouTube & 1000+ sites to Telegram",
+        "Gallerydl": "Image/gallery sites to your cloud",
+        "GallerydlLeech": "Image/gallery sites to Telegram",
+        "Clone": "Copy a Drive file/folder to your Drive",
+        "RcloneFm": "Manage your cloud files",
+        "Admin": "Admin panel",
+        "UserSet": "Your settings",
+        "ForceStart": "Start a waiting task now",
+        "Count": "Count files in a Drive link",
+        "List": "Search your Drive",
+        "Search": "Search torrents",
+        "Select": "Pick which files of a torrent to download",
+        "Ping": "Check if the bot is alive",
+        "Status": "See running tasks",
+        "Stats": "Bot and server stats",
+        "Rss": "RSS feeds",
+        "CancelAll": "Cancel all tasks",
+        "Help": "How to use the bot",
+        "BotSet": "Bot settings (admin)",
+        "Log": "Bot log file (admin)",
+        "Memory": "Memory usage (admin)",
+        "Restart": "Restart the bot (admin)",
+        "RestartSessions": "Restart user sessions (admin)",
     }
 
     commands = static_commands.copy()
@@ -594,7 +594,7 @@ BOT_COMMANDS = get_bot_commands()
 def get_help_string():
     from ..telegram_helper.bot_commands import BotCommands
 
-    help_lines = ["NOTE: Try each command without any argument to see more details."]
+    help_lines = ["Tip: send any command without anything after it to see how to use it."]
 
     commands = BotCommands.get_commands()
 
