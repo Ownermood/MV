@@ -277,13 +277,35 @@ RECOMMENDED_DEFAULTS = {
     3: {"RICH_STATUS": True, "INC_TASK_RESUME": True},
 }
 
+# faster aria2 downloads: 16 connections per file (aria2's maximum), smaller
+# pieces so more of them run at once, no slow zero-filling before the start.
+# Saved aria2 options override the start flags, so they are updated once too.
+ARIA2_SPEED_VERSION = 4
+ARIA2_SPEED = {
+    "max-connection-per-server": "16",
+    "split": "16",
+    "min-split-size": "4M",
+    "file-allocation": "none",
+}
+
 
 async def apply_recommended_defaults():
     changes = {}
+    if Config.DEFAULTS_VERSION < ARIA2_SPEED_VERSION and aria2_options:
+        aria2_options.update(ARIA2_SPEED)
+        if database.db is not None:
+            await database.db.settings.aria2c.update_one(
+                {"_id": TgClient.PARTITION or db_partition_id(TgClient.ID)},
+                {"$set": ARIA2_SPEED},
+                upsert=True,
+            )
     for version, values in sorted(RECOMMENDED_DEFAULTS.items()):
         if Config.DEFAULTS_VERSION < version:
             changes.update(values)
             Config.DEFAULTS_VERSION = version
+    if Config.DEFAULTS_VERSION < ARIA2_SPEED_VERSION:
+        Config.DEFAULTS_VERSION = ARIA2_SPEED_VERSION
+        changes["DEFAULTS_VERSION"] = ARIA2_SPEED_VERSION
     if not changes:
         return
     for key, value in changes.items():
