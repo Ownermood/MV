@@ -55,7 +55,7 @@ async def main():
     t("cache bypass sees leaving", await fj.missing_chats(9, use_cache=False) == [("📢 Updates", "https://t.me/mainch")])
     fj.clear_join_cache()
     markup = fj.join_markup(9, [("📢 Updates", "https://t.me/mainch"), ("NoLink", None)])
-    t(f"join buttons + I've Joined {markup}", markup == [("➕ 📢 Updates", "https://t.me/mainch"), ("✅ I've Joined", "fsub 9")])
+    t(f"only join buttons, no I've Joined {markup}", markup == [("➕ 📢 Updates", "https://t.me/mainch")])
     import pyrogram.enums as pe
     t(f"join buttons are green {STYLES}", STYLES == [pe.ButtonStyle.SUCCESS])
     txt = fj.join_text([("A&B <x>", "l")])

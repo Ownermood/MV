@@ -69,8 +69,8 @@ MEM_BUDGET = 0
 MEM_DEEP_STATS = False
 
 # Telegraph
-AUTHOR_NAME = "Mirrorleach Villanbot"
-AUTHOR_URL = "https://t.me/Mirrorleach_Villanbot"
+AUTHOR_NAME = "Mirror Leech Villan Bot"
+AUTHOR_URL = "https://t.me/Mirrorleech_Villanbot"
 START_LINKS = {}  # /start buttons, e.g. {"📢 Updates": "https://t.me/x", "💬 Support": "https://t.me/y"}
 START_TEXT = ""  # custom welcome text under the greeting (HTML); empty = built-in
 START_IMAGE = ""  # welcome photo: URL or Telegram file_id; empty = IMAGES / none
@@ -153,7 +153,7 @@ STOP_DUPLICATE = False
 INDEX_URL = ""
 
 # YT Tools
-YT_DESP = "Uploaded with Mirrorleach Villanbot"
+YT_DESP = "Uploaded with Mirror Leech Villan Bot"
 YT_TAGS = ["telegram", "bot", "youtube"]  # or as a comma-separated string
 YT_CATEGORY_ID = 22
 YT_PRIVACY_STATUS = "unlisted"

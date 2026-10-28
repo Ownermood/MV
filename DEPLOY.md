@@ -1,4 +1,4 @@
-# Deploy Mirrorleach Villanbot on a VPS
+# Deploy Mirror Leech Villan Bot on a VPS
 
 Tested layout: Ubuntu 22.04/24.04, 2+ GB RAM, 20+ GB disk (downloads need space).
 
@@ -33,7 +33,7 @@ Required:
 
 | Key | Where to get it |
 |---|---|
-| `BOT_TOKEN` | @BotFather → /newbot (or /token for @Mirrorleach_Villanbot) |
+| `BOT_TOKEN` | @BotFather → /newbot (or /token for @Mirrorleech_Villanbot) |
 | `OWNER_ID` | your Telegram user ID (@userinfobot) |
 | `TELEGRAM_API`, `TELEGRAM_HASH` | https://my.telegram.org → API development tools |
 | `DATABASE_URL` | MongoDB connection string (MongoDB Atlas free tier works). Needed to keep settings across restarts |

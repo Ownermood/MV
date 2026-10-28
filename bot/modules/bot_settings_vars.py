@@ -237,7 +237,7 @@ DEFAULT_DESP = {
     "WEB_PINCODE": "Ask for pincode in web file selection. Default: True.",
     "YT_DLP_OPTIONS": "Default yt-dlp options. Format: key:value|key:value.",
     "GALLERY_DL_OPTIONS": "Default gallery-dl options as a dict, e.g. {\"image-range\": \"1-50\"}.",
-    "YT_DESP": "Description for YouTube uploads. Default: Uploaded with Mirrorleach Villanbot.",
+    "YT_DESP": "Description for YouTube uploads. Default: Uploaded with Mirror Leech Villan Bot.",
     "YT_TAGS": "Tags for YouTube uploads. List format.",
     "YT_CATEGORY_ID": "YouTube video category ID. Default: 22 (People & Blogs).",
     "PLUGIN_INDEXES": "Extra plugin index URLs on top of the official one. Each must be a JSON file holding a plugins list.",

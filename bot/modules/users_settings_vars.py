@@ -233,7 +233,7 @@ Here I will explain how to use mltb.* which is reference to files you want to wo
     "METADATA_CMDS": (
         "Legacy",
         "Replaced by Metadata in FF Media Settings.",
-        """<i>Send your Meta data. You can set it according to the format title="Join @Mirrorleach_Villanbot".</i>
+        """<i>Send your Meta data. You can set it according to the format title="Join @Mirrorleech_Villanbot".</i>
 <b>Full Documentation Guide</b> <a href="https://t.me/WZML_X/">Click Here</a>
 ┖ <b>Time Left :</b> <code>60 sec</code>
 """,

@@ -73,7 +73,7 @@ class TelegraphHelper:
                     nxt_page += 1
             await self.edit_page(
                 path=path[prev_page],
-                title="Mirrorleach Villanbot Torrent Search",
+                title="Mirror Leech Villan Bot Torrent Search",
                 content=content,
             )
         return

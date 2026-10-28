@@ -89,7 +89,6 @@ def join_markup(user_id, missing):
     for name, link in missing:
         if link:
             buttons.url_button(label("add", name), link, style=ButtonStyle.SUCCESS, icon=icon("add"))
-    buttons.data_button(label("done", "I've Joined"), f"fsub {user_id}", "footer", icon=icon("done"))
     return buttons.build_menu(1)
 
 
@@ -97,8 +96,8 @@ def join_text(missing):
     rows = "\n".join(f"{e('link')} <b>{escape(name)}</b>" for name, _ in missing)
     return (
         f"{e('warn')} <b>Join required</b>\n\n"
-        f"To use <b>Mirrorleach Villanbot</b>, please join:\n{rows}\n\n"
-        f"You are verified automatically after joining, or tap <b>I've Joined</b>."
+        f"To use <b>Mirror Leech Villan Bot</b>, please join:\n{rows}\n\n"
+        f"{e('done')} You are verified <b>automatically</b> as soon as you join."
     )
 
 

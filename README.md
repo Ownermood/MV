@@ -1,7 +1,7 @@
-<h1 align="center">Mirrorleach Villanbot</h1>
+<h1 align="center">Mirror Leech Villan Bot</h1>
 
 <p align="center">
-   Telegram mirror &amp; leech bot — <a href="https://t.me/Mirrorleach_Villanbot">@Mirrorleach_Villanbot</a>
+   Telegram mirror &amp; leech bot — <a href="https://t.me/Mirrorleech_Villanbot">@Mirrorleech_Villanbot</a>
 </p>
 
 <p align="center">
@@ -40,7 +40,7 @@
 
 ## Why Use It
 
-Mirrorleach Villanbot is built for users who want a single bot stack that can mirror, leech, manage files, and expose a simple web-based selection flow without stitching together multiple tools. The README focuses on what you need to deploy it quickly, understand the moving parts, and tune the behavior safely.
+Mirror Leech Villan Bot is built for users who want a single bot stack that can mirror, leech, manage files, and expose a simple web-based selection flow without stitching together multiple tools. The README focuses on what you need to deploy it quickly, understand the moving parts, and tune the behavior safely.
 
 ## What It Covers
 

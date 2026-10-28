@@ -91,7 +91,7 @@ async def _home(uid):
     except Exception:
         users = "N/A"
     text = f"""{e("gem")} <b>ADMIN PANEL</b>
-<blockquote>{e("bolt")} <b>Mirrorleach Villanbot</b> · <i>owner &amp; sudo only</i></blockquote>
+<blockquote>{e("bolt")} <b>Mirror Leech Villan Bot</b> · <i>owner &amp; sudo only</i></blockquote>
 <blockquote expandable>{e("users")} <b>Users:</b> <code>{users}</code>
 {e("chart")} <b>Running tasks:</b> <code>{len(task_dict)}</code>
 {e("clock")} <b>Uptime:</b> <code>{get_readable_time(time() - bot_start_time)}</code>

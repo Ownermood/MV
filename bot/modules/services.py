@@ -312,7 +312,7 @@ async def start(_, message):
     else:
         await send_message(
             message,
-            f"{greeting}{e('bolt')} <b>Mirrorleach Villanbot</b>\n"
+            f"{greeting}{e('bolt')} <b>Mirror Leech Villan Bot</b>\n"
             "<i>Mirror &amp; leech links, Telegram files, torrents, NZB and cloud drives "
             "to Telegram, Google Drive or any rclone cloud.</i>\n\n"
             f"{e('blocked')} <b>You are not authorized yet.</b>\n"

@@ -182,7 +182,7 @@ value = eval(value)                      # per-user {dict} settings (UPLOAD_PATH
 
 ---
 
-## 9. Status in this repo (Mirrorleach Villanbot, based on WZML-X wzv3)
+## 9. Status in this repo (Mirror Leech Villan Bot, based on WZML-X wzv3)
 
 Everything above describes the upstream projects. This repo is WZML-X plus the fixes below; each is a
 separate commit on this branch. Findings found during the merge (not in the sections above) are marked *new*.

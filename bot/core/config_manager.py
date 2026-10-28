@@ -65,8 +65,8 @@ class Config:
     VIKINGFILE_FOLDER = ""
     GDRIVE_ID = ""
     GD_DESP = "Uploaded with WZ Bot"
-    AUTHOR_NAME = "Mirrorleach Villanbot"
-    AUTHOR_URL = "https://t.me/Mirrorleach_Villanbot"
+    AUTHOR_NAME = "Mirror Leech Villan Bot"
+    AUTHOR_URL = "https://t.me/Mirrorleech_Villanbot"
     START_LINKS = {}
     START_TEXT = ""
     START_IMAGE = ""
@@ -189,7 +189,7 @@ class Config:
     WEB_PINCODE = True
     YT_DLP_OPTIONS = {}
     GALLERY_DL_OPTIONS = {}
-    YT_DESP = "Uploaded with Mirrorleach Villanbot"
+    YT_DESP = "Uploaded with Mirror Leech Villan Bot"
     YT_TAGS = ["telegram", "bot", "youtube"]
     YT_CATEGORY_ID = 22
     YT_PRIVACY_STATUS = "unlisted"
