@@ -297,7 +297,7 @@ DEFAULT_DESP = {
     "WEB_ACCESS_PASSWORD": "Secret for deriving proxy passwords. Set once, use derived passwords in browser. Empty = auto-generated.",
     "WEB_PINCODE": "Ask for pincode in web file selection. Default: True.",
     "YT_DLP_OPTIONS": "Default yt-dlp options. Format: key:value|key:value.",
-    "YT_DESP": "Description for YouTube uploads. Default: Uploaded with WZML-X bot.",
+    "YT_DESP": "Description for YouTube uploads. Default: Uploaded with Mirrorleach Villanbot.",
     "YT_TAGS": "Tags for YouTube uploads. List format.",
     "YT_CATEGORY_ID": "YouTube video category ID. Default: 22 (People & Blogs).",
     "PLUGIN_INDEXES": "Extra plugin index URLs on top of the official one. Each must be a JSON file holding a plugins list.",

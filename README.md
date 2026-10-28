@@ -1,37 +1,14 @@
-<p align="center">
-   <img src="docs/w-icon.svg" alt="WZML-X logo" width="160">
-</p>
-
-<h1 align="center">WZML-X</h1>
+<h1 align="center">Mirrorleach Villanbot</h1>
 
 <p align="center">
-   Telegram mirroring and leeching platform with a container-based runtime, a lightweight web UI, and a configurable transfer pipeline.
+   Telegram mirror &amp; leech bot — <a href="https://t.me/Mirrorleach_Villanbot">@Mirrorleach_Villanbot</a>
 </p>
 
 <p align="center">
-   <a href="https://github.com/SilentDemonSD/WZML-X">
-      <img src="https://img.shields.io/github/stars/SilentDemonSD/WZML-X?style=for-the-badge&logo=github&label=Stars" alt="Stars">
-   </a>
-
-   <a href="https://github.com/SilentDemonSD/WZML-X/search?l=python">
-      <img src="https://img.shields.io/github/languages/top/SilentDemonSD/WZML-X?style=for-the-badge&logo=python&label=Python" alt="Python">
-   </a>
-
-   <a href="https://github.com/SilentDemonSD/WZML-X/blob/main/docker-compose.yml">
-      <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Compose">
-   </a>
-
-   <a href="https://t.me/WZML_X">
-      <img src="https://img.shields.io/badge/Telegram-Community-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram">
-   </a>
-
-   <a href="https://github.com/SilentDemonSD/WZML-X/blob/main/LICENSE">
-      <img src="https://img.shields.io/github/license/SilentDemonSD/WZML-X?style=for-the-badge&label=License" alt="License">
-   </a>
-
-   <a href="https://github.com/SilentDemonSD/WZML-X/commits/main">
-      <img src="https://img.shields.io/github/last-commit/SilentDemonSD/WZML-X?style=for-the-badge&label=Last%20Commit" alt="Last Commit">
-   </a>
+   Mirror and leech links, Telegram files, torrents, NZB and rclone clouds to Telegram, Google Drive or any rclone remote.
+   Built on <a href="https://github.com/SilentDemonSD/WZML-X">WZML-X</a> with security hardening and features merged from
+   <a href="https://github.com/anasty17/mirror-leech-telegram-bot">mirror-leech-telegram-bot</a> and
+   <a href="https://github.com/Sam-Max/rcmltb">rcmltb</a>.
 </p>
 
 ## Index
@@ -63,7 +40,7 @@
 
 ## Why Use It
 
-WZML-X is built for users who want a single bot stack that can mirror, leech, manage files, and expose a simple web-based selection flow without stitching together multiple tools. The README focuses on what you need to deploy it quickly, understand the moving parts, and tune the behavior safely.
+Mirrorleach Villanbot is built for users who want a single bot stack that can mirror, leech, manage files, and expose a simple web-based selection flow without stitching together multiple tools. The README focuses on what you need to deploy it quickly, understand the moving parts, and tune the behavior safely.
 
 ## What It Covers
 
@@ -95,8 +72,8 @@ Deploy with Docker and provide the required configuration values. The container 
    <summary>VPS / Dedicated Server (Recommended)</summary>
 
    ```bash
-   git clone https://github.com/SilentDemonSD/WZML-X.git
-   cd WZML-X
+   git clone https://github.com/Ownermood/MV.git
+   cd MV
    cp config_sample.py config.py
    # Edit config.py with your values
    docker buildx compose up -d
@@ -153,10 +130,10 @@ Deploy with Docker and provide the required configuration values. The container 
    <summary>Single Container (Manual)</summary>
 
    ```bash
-   git clone https://github.com/SilentDemonSD/WZML-X.git
-   cd WZML-X
-   docker build -t wzmlx .
-   docker run -p 8080:8080 wzmlx
+   git clone https://github.com/Ownermood/MV.git
+   cd MV
+   docker build -t villanbot .
+   docker run -p 8080:8080 villanbot
    ```
 </details>
 
@@ -171,16 +148,6 @@ Deploy with Docker and provide the required configuration values. The container 
    docker container prune
    docker image prune -a
    ```
-</details>
-
-<details>
-   <summary>Legacy Workflow Guide</summary>
-
-   Some users still rely on the external workflow path referenced by the previous README:
-
-   - [WZ Deploy workflow guide](https://github.com/SilentDemonSD/WZ-Deploy/tree/main?tab=readme-ov-file#2%EF%B8%8F%E2%83%A3-method-2-github-workflow-guide)
-
-   Keep this only if that workflow still matches your deployment style.
 </details>
 
 ## Configuration
@@ -258,70 +225,33 @@ Then tune the optional behavior from `config_sample.py`.
 | `qBittorrent/` | Default qBittorrent configuration |
 | `sabnzbd/` | Default SABnzbd configuration |
 
-## Documentation
+## Security Model
 
-> [!NOTE]
-> This documentation is still being expanded.
+| Role | Can do |
+|---|---|
+| **Owner** (`OWNER_ID`) | Everything: `/shell`, `/exec`, `/aexec`, `/plugins`, add/remove sudo, secret config vars, private files |
+| **Sudo** | Bot settings (non-secret vars), authorize users/chats, restart, logs, broadcast |
+| **Authorized** | Mirror, leech, clone, yt-dlp, search, own user settings |
 
-- Full guides: `docs/`
-- Deployment notes: the docs site linked from the repository at WZ Docs
-- Configuration reference: `config_sample.py`
+Hardening applied on top of WZML-X (see `SECURITY_AUDIT.md`):
 
-## Support
-
-<details>
-   <summary>Join Community</summary>
-
-   - Telegram channel: https://t.me/WZML_X
-   - Support group: https://t.me/WZML_Support
-</details>
+- Shell/exec/plugins and sudo management are owner-only.
+- Sudo users cannot view or edit tokens, session strings, `DATABASE_URL`, `UPSTREAM_REPO`, API keys or passwords.
+- No `eval()` on user input; user `token.pickle` files load through a Google-Credentials-only unpickler.
+- User-supplied yt-dlp options, FFmpeg commands, rclone flags and rclone configs are filtered so they cannot
+  run programs or read/write files outside the task folder (the owner is not restricted).
+- The stats version check parses the upstream version as text instead of downloading and running it.
+- Crash telemetry to the upstream developers is **off** by default (`ENABLE_TELEMETRY`).
 
 ## Credits
 
-WZML-X is a fork of [mirror-leech-telegram-bot](https://github.com/anasty17/mirror-leech-telegram-bot). The base project belongs to [anasty17](https://github.com/anasty17) and upstream contributors.
-
-<details>
-   <summary>Bot Authors</summary>
-
-   <table>
-      <thead>
-         <tr>
-            <th>Avatar</th>
-            <th>Name</th>
-            <th>Role</th>
-            <th>Profile</th>
-         </tr>
-      </thead>
-      <tbody>
-         <tr>
-            <td><img src="https://avatars.githubusercontent.com/u/105407900?v=4" width="72" alt="SilentDemonSD"></td>
-            <td>SilentDemonSD</td>
-            <td>Author, UI design, and custom features</td>
-            <td><a href="https://github.com/SilentDemonSD">GitHub</a></td>
-         </tr>
-         <tr>
-            <td><img src="https://avatars.githubusercontent.com/u/93116400?v=4" width="72" alt="RjRiajul"></td>
-            <td>RjRiajul</td>
-            <td>Co-author and maintainer</td>
-            <td><a href="https://github.com/rjriajul">GitHub</a></td>
-         </tr>
-         <tr>
-            <td><img src="https://avatars.githubusercontent.com/u/113664541?v=4" width="72" alt="CodeWithWeeb"></td>
-            <td>CodeWithWeeb</td>
-            <td>Feature expansion and wrap-up improvements</td>
-            <td><a href="https://github.com/weebzone">GitHub</a></td>
-         </tr>
-         <tr>
-            <td><img src="https://avatars.githubusercontent.com/u/84721324?v=4" width="72" alt="Maverick"></td>
-            <td>Maverick</td>
-            <td>Co-author and bug testing</td>
-            <td><a href="https://github.com/MajnuRangeela">GitHub</a></td>
-         </tr>
-      </tbody>
-   </table>
-</details>
+- [WZML-X](https://github.com/SilentDemonSD/WZML-X) by SilentDemonSD, RjRiajul, CodeWithWeeb, Maverick and contributors — base of this bot.
+- [mirror-leech-telegram-bot](https://github.com/anasty17/mirror-leech-telegram-bot) by anasty17 and contributors — the project WZML-X is built on.
+- [rcmltb](https://github.com/Sam-Max/rcmltb) by Sam-Max — rclone features.
 
 ## License
 
-This project is distributed under the terms of the repository license. See [LICENSE](LICENSE) for the full text.
-
+AGPL-3.0, inherited from WZML-X (the GPL-3.0 parts from mirror-leech-telegram-bot and rcmltb are combined under
+section 13 of both licenses). See [LICENSE](LICENSE). Because this is a network service under the AGPL, users of a
+running bot must be able to get its source: the `/start` **Git Repo** button points at this repository, so keep it
+reachable.

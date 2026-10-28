@@ -65,8 +65,8 @@ MEM_BUDGET = 0
 MEM_DEEP_STATS = False
 
 # Telegraph
-AUTHOR_NAME = "WZML-X"
-AUTHOR_URL = "https://t.me/WZML_X"
+AUTHOR_NAME = "Mirrorleach Villanbot"
+AUTHOR_URL = "https://t.me/Mirrorleach_Villanbot"
 
 # Task Limits
 DIRECT_LIMIT = 0
@@ -142,7 +142,7 @@ STOP_DUPLICATE = False
 INDEX_URL = ""
 
 # YT Tools
-YT_DESP = "Uploaded to YouTube by WZML-X bot"
+YT_DESP = "Uploaded with Mirrorleach Villanbot"
 YT_TAGS = ["telegram", "bot", "youtube"]  # or as a comma-separated string
 YT_CATEGORY_ID = 22
 YT_PRIVACY_STATUS = "unlisted"

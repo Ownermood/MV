@@ -264,7 +264,7 @@ Here I will explain how to use mltb.* which is reference to files you want to wo
     "METADATA_CMDS": (
         "Legacy",
         "Replaced by Metadata in FF Media Settings.",
-        """<i>Send your Meta data. You can set it according to the format title="Join @WZML_X".</i>
+        """<i>Send your Meta data. You can set it according to the format title="Join @Mirrorleach_Villanbot".</i>
 <b>Full Documentation Guide</b> <a href="https://t.me/WZML_X/">Click Here</a>
 ┖ <b>Time Left :</b> <code>60 sec</code>
 """,
@@ -1355,7 +1355,7 @@ async def do_export(_, message, rfunc):
     finally:
         phrase = None
     with BytesIO(blob) as out:
-        out.name = f"wzmlx-settings-{user_id}.json"
+        out.name = f"villanbot-settings-{user_id}.json"
         await send_file(
             message,
             out,

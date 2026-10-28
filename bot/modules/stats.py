@@ -1,10 +1,11 @@
 from asyncio import gather, sleep, wait_for, TimeoutError
 from pyrogram.enums import ButtonStyle
 from platform import platform, version
-from re import search as research
+from re import findall as refindall, search as research
 from time import time
 
 from aiofiles.os import path as aiopath
+from niquests import AsyncSession
 from psutil import (
     Process,
     boot_time,
@@ -44,6 +45,22 @@ from ..helper.telegram_helper.message_utils import (
     send_message,
 )
 from ..version import get_version
+
+UPSTREAM_VERSION_URL = (
+    "https://raw.githubusercontent.com/SilentDemonSD/WZML-X/wzv3/bot/version.py"
+)
+
+
+async def upstream_version():
+    # Parse the upstream version file as text; never execute remote code
+    try:
+        async with AsyncSession(timeout=10) as session:
+            r = await session.get(UPSTREAM_VERSION_URL)
+        parts = dict(refindall(r'(MAJOR|MINOR|PATCH|STATE)\s*=\s*"([^"]+)"', r.text))
+        return f"v{parts['MAJOR']}.{parts['MINOR']}.{parts['PATCH']}-{parts['STATE']}"
+    except Exception as e:
+        LOGGER.warning(f"Upstream version check failed: {e}")
+        return "N/A"
 
 commands = {
     "aria2": ([BinConfig.ARIA2_NAME, "--version"], r"aria2 version ([\d.]+)"),
@@ -162,17 +179,12 @@ async def get_stats(event, key="home"):
         changelog = git_info.commit_msg() or "N/A"
         if git_info.commit_hash() != "unknown":
             changelog += f" | <code>{git_info.commit_hash()}</code>"
-        official_v = (
-            await cmd_exec(
-                f"curl -o latestversion.py https://raw.githubusercontent.com/SilentDemonSD/WZML-X/{Config.UPSTREAM_BRANCH}/bot/version.py -s && python3 latestversion.py && rm latestversion.py",
-                True,
-            )
-        )[0]
+        official_v = await upstream_version()
         msg = f"""⌬ <b><i>Repo Statistics :</i></b>
 │
 ┟ <b>Bot Updated :</b> {last_commit}
 ┠ <b>Current Version :</b> {get_version()}
-┠ <b>Latest Version :</b> {official_v}
+┠ <b>Upstream WZML-X Version :</b> {official_v}
 ┖ <b>Last ChangeLog :</b> {changelog}
 
 ⌬ <b>REMARKS :</b> <code>{compare_versions(get_version(), official_v)}</code>
