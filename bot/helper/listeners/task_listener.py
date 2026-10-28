@@ -62,7 +62,7 @@ from ..mirror_leech_utils.status_utils.yt_status import YtStatus
 from ..mirror_leech_utils.upload_utils.telegram_uploader import TelegramUploader
 from ..mirror_leech_utils.youtube_utils.youtube_upload import YouTubeUpload
 from ..telegram_helper.button_build import ButtonMaker
-from ..telegram_helper.emoji import e
+from ..telegram_helper.emoji import e, icon, label
 from ..telegram_helper.error_report import report_error, report_task_error, short_reason
 from ..telegram_helper.message_utils import (
     delete_links,
@@ -76,6 +76,19 @@ from ..telegram_helper.message_utils import (
 class TaskListener(TaskConfig):
     def __init__(self):
         super().__init__()
+
+    async def _tell_group_sent(self, what):
+        """One short line in the group, tagging the user, with a DM button."""
+        buttons = ButtonMaker()
+        buttons.url_button(
+            label("mail", "Open DM"),
+            f"https://t.me/{TgClient.BNAME}",
+            style=ButtonStyle.SUCCESS,
+            icon=icon("mail"),
+        )
+        await send_message(
+            self.message, f"{self.tag} {e('mail')} <b>{what}</b>", buttons.build_menu(1)
+        )
 
     async def clean(self):
         with suppress(Exception):
@@ -527,8 +540,10 @@ class TaskListener(TaskConfig):
                 msg += f"\n<b>Corrupted:</b> {mime_type}"
             msg += f"\n<b>User:</b> {self.tag}</blockquote>\n"
 
-            # with BOT_PM the summary and files go to the user's DM only;
-            # the group stays clean
+            # with BOT_PM the summary and files go to the user's DM; the group
+            # only gets one line tagging the user
+            if self.bot_pm and self.is_super_chat:
+                await self._tell_group_sent("Files have been sent to your DM.")
 
             if not files and not self.is_super_chat:
                 await send_message(self.message, msg)
@@ -644,7 +659,9 @@ class TaskListener(TaskConfig):
             if hasattr(Config, "MIRROR_LOG_ID") and Config.MIRROR_LOG_ID:
                 await send_message(Config.MIRROR_LOG_ID, msg, button)
 
-            if not (self.bot_pm and self.is_super_chat):
+            if self.bot_pm and self.is_super_chat:
+                await self._tell_group_sent("Cloud link has been sent to your DM.")
+            else:
                 await send_message(self.message, group_msg, button)
         if self.seed:
             await clean_target(self.up_dir)
