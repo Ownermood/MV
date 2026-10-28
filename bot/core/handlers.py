@@ -2,8 +2,9 @@
 
 from pyrogram.filters import command, regex
 from pyrogram.handlers import CallbackQueryHandler, EditedMessageHandler, MessageHandler
-from pyrogram.types import BotCommand
+from pyrogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeDefault
 
+from .. import LOGGER, sudo_users, user_data
 from ..core.config_manager import Config
 from ..helper.ext_utils.help_messages import BOT_COMMANDS
 from ..helper.telegram_helper.bot_commands import BotCommands
@@ -552,14 +553,29 @@ async def add_handlers():
                 len(BOT_COMMANDS),
             )
 
-        await TgClient.bot.set_bot_commands(
-            [
-                BotCommand(
-                    cmds[0] if isinstance(cmds, list) else cmds,
-                    description,
-                )
-                for cmd, description in BOT_COMMANDS.items()
+        def _menu(items):
+            return [
+                BotCommand(cmds[0] if isinstance(cmds, list) else cmds, description)
+                for cmd, description in items
                 for cmds in [getattr(BotCommands, f"{cmd}Command", None)]
                 if cmds is not None
             ]
-        )
+
+        # admin commands only appear in the menu of the owner's and sudo users' chats
+        admin_keys = {"Admin", "BotSet", "Log", "Memory", "Restart", "RestartSessions", "Plugins"}
+        public = [
+            (k, v)
+            for k, v in BOT_COMMANDS.items()
+            if k not in admin_keys and not str(v).startswith("[SUDO]")
+        ]
+        await TgClient.bot.set_bot_commands(_menu(public), scope=BotCommandScopeDefault())
+        admins = {Config.OWNER_ID, *sudo_users} | {
+            uid for uid, data in user_data.items() if uid > 0 and data.get("SUDO")
+        }
+        for uid in admins:
+            try:
+                await TgClient.bot.set_bot_commands(
+                    _menu(BOT_COMMANDS.items()), scope=BotCommandScopeChat(uid)
+                )
+            except Exception as err:
+                LOGGER.warning(f"Admin command menu not set for {uid}: {err}")

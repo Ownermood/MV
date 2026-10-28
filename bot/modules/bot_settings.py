@@ -130,6 +130,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
         buttons.data_button("Aria2c Settings", "botset aria")
         buttons.data_button("Sabnzbd Settings", "botset nzb")
         buttons.data_button("JDownloader Sync", "botset syncjd")
+        buttons.data_button("↩️ Admin Panel", "botset adminpanel")
         buttons.data_button("Close", "botset close", style=ButtonStyle.DANGER)
         msg = "Bot Settings:"
     elif edit_type is not None:
@@ -1103,6 +1104,12 @@ async def edit_bot_settings(client, query):
         await query.answer()
         await delete_message(message.reply_to_message)
         await delete_message(message)
+    elif data[1] == "adminpanel":
+        from .admin_panel import _home as admin_home
+
+        await query.answer()
+        text, markup = await admin_home(query.from_user.id)
+        await edit_message(message, text, markup)
     elif data[1] == "back":
         await query.answer()
         key = data[2] if len(data) == 3 else None

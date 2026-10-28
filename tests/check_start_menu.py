@@ -18,7 +18,7 @@ lang_ns = {}; exec(open(f"{REPO}/bot/helper/languages/en.py").read(), lang_ns)
 from html import escape
 ns = {"BotCommands": BotCommands, "escape": escape, "Config": Cfg, "e": em.e, "Language": lambda: types.SimpleNamespace(**{k: v for k, v in lang_ns.items() if k.isupper()})}
 exec(compile(ast.Module(body=body, type_ignores=[]), "x", "exec"), ns)
-allowed = {"b", "i", "code", "a", "u", "s", "pre", "blockquote", "tg-emoji"}
+allowed = {"b", "i", "code", "a", "u", "s", "pre", "blockquote", "tg-emoji", "tg-spoiler"}
 class P(HTMLParser):
     def __init__(s): super().__init__(); s.stack = []; s.bad = []
     def handle_starttag(s, tg, a): (s.bad.append(tg) if tg not in allowed else None); s.stack.append(tg)

@@ -9,8 +9,10 @@ class Cfg:
     @classmethod
     def set(cls, k, v): setattr(cls, k, v)
 saved = {}
+auth_saved = []
 class DB:
     async def update_config(self, d): saved.update(d)
+    async def update_user_data(self, cid): auth_saved.append(cid)
     async def get_pm_uids(self): return [1, 2, 3]
 sent, edits, prompts, pm_queue = [], [], [], []
 class Msg:
@@ -42,10 +44,12 @@ class BM:
     def build_menu(s, *a, **k): return list(s.rows)
 bc_calls = []
 async def run_broadcast(rply, reply_to, forwarded=False, quietly=False): bc_calls.append((rply, quietly)); return "bc9"
-mod("bot", bot_start_time=0, task_dict={1: 1}); mod("bot.core"); mod("bot.core.config_manager", Config=Cfg)
+udata = {}
+def update_user_ldata(cid, k, v): udata.setdefault(cid, {})[k] = v
+mod("bot", bot_start_time=0, task_dict={1: 1}, auth_chats={-1009: []}, user_data=udata); mod("bot.core"); mod("bot.core.config_manager", Config=Cfg)
 mod("bot.core.tg_client", TgClient=types.SimpleNamespace(bot=bot))
 mod("bot.helper"); mod("bot.helper.ext_utils")
-mod("bot.helper.ext_utils.bot_utils", new_task=lambda f: f); mod("bot.helper.ext_utils.db_handler", database=DB())
+mod("bot.helper.ext_utils.bot_utils", new_task=lambda f: f, update_user_ldata=update_user_ldata); mod("bot.helper.ext_utils.db_handler", database=DB())
 mod("bot.helper.ext_utils.status_utils", get_readable_time=lambda s: "1h")
 mod("bot.helper.telegram_helper")
 mod("bot.helper.telegram_helper.button_build", ButtonMaker=BM, valid_url=lambda u: u if u.startswith("https://") else None)
@@ -76,7 +80,7 @@ ap.Message = Msg
 ok = True
 def t(n, c):
     global ok; ok &= bool(c); print("PASS" if c else "FAIL", n)
-allowed = {"b", "i", "code", "a", "u", "s", "pre", "blockquote", "tg-emoji"}
+allowed = {"b", "i", "code", "a", "u", "s", "pre", "blockquote", "tg-emoji", "tg-spoiler"}
 class P(HTMLParser):
     def __init__(s): super().__init__(); s.stack = []; s.bad = []
     def handle_starttag(s, tg, a): (s.bad.append(tg) if tg not in allowed else None); s.stack.append(tg)
@@ -95,9 +99,9 @@ async def main():
         q = Q(data, m, uid); await ap.admin_panel_cb(None, q); return q
     for prem in (False, True):
         Cfg.PREMIUM_EMOJI = prem
-        for page in ("home", "text", "img", "btns", "bc", "prem", "fj"):
+        for page in ("home", "text", "img", "btns", "bc", "prem", "fj", "grp"):
             await click(f"adm 7 {page}")
-            t(f"page {page} valid (premium={prem})", valid(m.text, m.markup) and all(r[2] is None for r in m.markup))
+            t(f"page {page} valid (premium={prem})", valid(m.text, m.markup) and all(r[2] == ap.RED for r in m.markup))
     Cfg.PREMIUM_EMOJI = False
     q = await click("adm 7 home", uid=8); t("other admin blocked", q.alerts and "another admin" in q.alerts[0])
     answers.append(Str("Welcome to my bot")); await click("adm 7 text_set")
@@ -135,6 +139,12 @@ async def main():
     pm_queue.append(Msg(text="-999")); await click("adm 7 fj_add"); t("unknown chat refused", "can't open" in m.text and len(saved["FORCE_SUB_CHATS"]) == 2)
     await click("adm 7 fj"); t("force join page valid", valid(m.text, m.markup) and "Our Group" in m.text)
     await click("adm 7 fj_rm 0"); t("force join chat removed", [c["id"] for c in saved["FORCE_SUB_CHATS"]] == ["-1002"])
+    pm_queue.append(Msg(text="-1001")); await click("adm 7 grp_add")
+    t("group authorized from panel", udata.get(-1001, {}).get("AUTH") is True and -1001 in auth_saved)
+    await click("adm 7 grp"); t(f"groups page lists config + panel groups", "-1009" in m.text and "from config" in m.text and "-1001" in m.text and valid(m.text, m.markup))
+    t("config group has no remove button", not any("Remove" in r[0] and "-1009" in r[0] for r in m.markup))
+    await click("adm 7 grp_rm -1001"); t("group removed", udata[-1001]["AUTH"] is False)
+    pm_queue.append(Msg(text="nope")); await click("adm 7 grp_add"); t("unknown group refused", "can't open" in m.text)
     await click("adm 7 close"); t("close deletes panel", getattr(m, "deleted", False))
 asyncio.run(main())
 print("ALL PASS" if ok else "SOME FAILED")

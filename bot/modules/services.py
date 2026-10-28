@@ -47,8 +47,8 @@ def _cmd(name):
 
 def _greeting(user):
     return (
-        f'{e("wave")} <b>Hey <a href="tg://user?id={user.id}">{escape(user.first_name or "there")}</a></b>'
-        f" (<code>{user.id}</code>)\n\n"
+        f'{e("wave")} <b>Hey <a href="tg://user?id={user.id}">{escape(user.first_name or "there")}</a></b>\n'
+        f'{e("key")} <b>ID:</b> <tg-spoiler><code>{user.id}</code></tg-spoiler>\n\n'
     )
 
 
@@ -106,10 +106,10 @@ def _guide_text(page):
 Send <code>{leech} link</code> or reply to a link/file with {leech}.
 
 <b>Handy options</b>
-├ <code>-n new name</code> → rename
+<blockquote expandable>├ <code>-n new name</code> → rename
 ├ <code>-z</code> → zip  •  <code>-e</code> → unzip
 ├ <code>-doc</code> / <code>-med</code> → send as file / media
-└ <code>-sp 2GB</code> → split size
+└ <code>-sp 2GB</code> → split size</blockquote>
 
 <b>Example</b>
 <code>{leech} https://site.com/file.zip -e</code>""",
@@ -119,10 +119,10 @@ Send <code>{mirror} link</code> or reply with {mirror}.
 Files go to Google Drive or rclone (set your own in {_cmd("UserSet")}).
 
 <b>Handy options</b>
-├ <code>-up rcl</code> → pick an rclone folder
+<blockquote expandable>├ <code>-up rcl</code> → pick an rclone folder
 ├ <code>-up gdl</code> → pick a Drive folder
 ├ <code>-z</code> → zip  •  <code>-e</code> → unzip
-└ <code>-n new name</code> → rename
+└ <code>-n new name</code> → rename</blockquote>
 
 {e("folder")} Manage cloud files with {_cmd("RcloneFm")}.""",
         "yt": f"""{e("play")} <b>YouTube &amp; 1000+ sites</b>
@@ -145,9 +145,9 @@ Send a magnet link or reply to a .torrent with:
 └ {mirror} / {_cmd("QbMirror")} → to cloud
 
 <b>Handy options</b>
-├ <code>-s</code> → select files before download
+<blockquote expandable>├ <code>-s</code> → select files before download
 ├ <code>-ad</code> / <code>-tb</code> → AllDebrid / TorBox (faster)
-└ {e("search")} {_cmd("Search")} <code>name</code> → search torrents""",
+└ {e("search")} {_cmd("Search")} <code>name</code> → search torrents</blockquote>""",
         "settings": f"""{e("gear")} <b>Settings &amp; tasks</b>
 
 {_cmd("UserSet")} → your own settings: thumbnail, caption,

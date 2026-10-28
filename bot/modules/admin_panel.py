@@ -3,15 +3,15 @@ from asyncio import Event, TimeoutError as AsyncTimeout, wait_for
 from html import escape
 from time import time
 
-from pyrogram.enums import ChatMemberStatus
+from pyrogram.enums import ButtonStyle, ChatMemberStatus
 from pyrogram.filters import private, user
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
 
-from .. import bot_start_time, task_dict
+from .. import auth_chats, bot_start_time, task_dict, user_data
 from ..core.config_manager import Config
 from ..core.tg_client import TgClient
-from ..helper.ext_utils.bot_utils import new_task
+from ..helper.ext_utils.bot_utils import new_task, update_user_ldata
 from ..helper.ext_utils.db_handler import database
 from ..helper.ext_utils.status_utils import get_readable_time
 from ..helper.telegram_helper.button_build import ButtonMaker, valid_url
@@ -27,6 +27,7 @@ from ..helper.telegram_helper.tg_utils import chat_info
 from .broadcast import run_broadcast
 from .services import start_home, start_photo
 
+RED = ButtonStyle.DANGER
 LINE = "━━━━━━━━━━━━━━━━━━"
 pending_broadcast = {}
 
@@ -44,7 +45,7 @@ def _cb(uid, action, arg=""):
 
 
 def _btn(buttons, uid, name, text, action, arg="", position=None):
-    buttons.data_button(label(name, text), _cb(uid, action, arg), position, icon=icon(name))
+    buttons.data_button(label(name, text), _cb(uid, action, arg), position, RED, icon(name))
 
 
 def _onoff(flag):
@@ -89,16 +90,17 @@ async def _home(uid):
         users = len(await database.get_pm_uids()) if Config.DATABASE_URL else "N/A"
     except Exception:
         users = "N/A"
-    text = f"""{e("gem")} <b>ADMIN PANEL</b> — <i>Mirrorleach Villanbot</i>
-{LINE}
-{e("users")} <b>Users:</b> <code>{users}</code>
+    text = f"""{e("gem")} <b>ADMIN PANEL</b>
+<blockquote>{e("bolt")} <b>Mirrorleach Villanbot</b> · <i>owner &amp; sudo only</i></blockquote>
+<blockquote expandable>{e("users")} <b>Users:</b> <code>{users}</code>
 {e("chart")} <b>Running tasks:</b> <code>{len(task_dict)}</code>
 {e("clock")} <b>Uptime:</b> <code>{get_readable_time(time() - bot_start_time)}</code>
-{e("star")} <b>Premium emoji:</b> {_onoff(Config.PREMIUM_EMOJI)}
+{e("globe")} <b>Allowed groups:</b> <code>{len(_groups())}</code>
 {e("key")} <b>Force join chats:</b> <code>{len(fsub_chats())}</code>
-{LINE}
-<i>Changes apply instantly and are saved.</i>"""
+{e("star")} <b>Premium emoji:</b> {_onoff(Config.PREMIUM_EMOJI)}</blockquote>
+<i>Tap a section. Changes apply instantly and are saved.</i>"""
     b = ButtonMaker()
+    _btn(b, uid, "globe", "Allowed Groups", "grp")
     _btn(b, uid, "wave", "Welcome Text", "text")
     _btn(b, uid, "image", "Welcome Image", "img")
     _btn(b, uid, "link", "Start Buttons", "btns")
@@ -106,7 +108,7 @@ async def _home(uid):
     _btn(b, uid, "mail", "Broadcast", "bc")
     _btn(b, uid, "gem", "Premium Emoji", "prem")
     _btn(b, uid, "search", "Preview /start", "preview")
-    _btn(b, uid, "gear", "All Settings", "settings")
+    _btn(b, uid, "gear", "Bot Settings", "bset")
     _btn(b, uid, "close", "Close", "close", position="footer")
     return text, b.build_menu(2)
 
@@ -228,6 +230,35 @@ Users must join these before they can use any command. Owner and sudo are never 
     return text, b.build_menu(1)
 
 
+def _groups():
+    """Authorized group chats: (chat_id, from_config)."""
+    found = {cid: True for cid in auth_chats if int(cid) < 0}
+    for cid, data in user_data.items():
+        if isinstance(cid, int) and cid < 0 and data.get("AUTH"):
+            found.setdefault(cid, False)
+    return sorted(found.items())
+
+
+async def _grp_page(uid, note=""):
+    groups = _groups()
+    rows = "\n".join(
+        f"{i}. <code>{cid}</code>{' <i>(from config)</i>' if cfg else ''}"
+        for i, (cid, cfg) in enumerate(groups, 1)
+    ) or "<i>None yet.</i>"
+    text = f"""{e("globe")} <b>Allowed Groups</b>
+{LINE}
+<blockquote>Members of these groups can use the bot <b>inside the group</b>. Anyone else who opens the bot gets <i>not authorized</i>. Owner and sudo always have access.</blockquote>
+<b>Groups:</b>
+{rows}{note}"""
+    b = ButtonMaker()
+    for i, (cid, cfg) in enumerate(groups, 1):
+        if not cfg:
+            _btn(b, uid, "remove", f"Remove {i}. {cid}", "grp_rm", cid)
+    _btn(b, uid, "add", "Add Group", "grp_add", position="f_body")
+    _back(b, uid)
+    return text, b.build_menu(1)
+
+
 PAGES = {
     "home": lambda uid, note="": _home(uid),
     "text": _text_page,
@@ -235,6 +266,7 @@ PAGES = {
     "btns": _btns_page,
     "bc": _bc_page,
     "fj": _fj_page,
+    "grp": _grp_page,
     "prem": _prem_page,
 }
 
@@ -274,8 +306,12 @@ async def admin_panel_cb(_, query):
         await query.answer()
         pending_broadcast.pop(uid, None)
         return await delete_message(msg)
-    if action == "settings":
-        return await query.answer("Send /bsetting for every config variable.", show_alert=True)
+    if action == "bset":
+        from .bot_settings import get_buttons
+
+        await query.answer()
+        text, markup = await get_buttons()
+        return await edit_message(msg, text, markup)
     if action == "preview":
         await query.answer("Preview sent to your private chat.")
         text, markup = start_home(query.from_user)
@@ -356,6 +392,39 @@ async def admin_panel_cb(_, query):
     if action == "tog_src":
         await _save("START_SOURCE_BUTTON", not Config.START_SOURCE_BUTTON)
         return await _show(msg, uid, "btns")
+    # allowed groups
+    if action == "grp_add":
+        await edit_message(msg, f"{e('globe')} <i>Waiting for the group in private chat…</i>")
+        sent = await send_message(
+            uid,
+            f"{e('globe')} Send the group ID (<code>-100…</code>) or @username, or forward a message from the group. Add the bot to the group first.",
+        )
+        if isinstance(sent, str):
+            return await _show(msg, uid, "grp", _note(False, "Start the bot in private chat first, then try again."))
+        reply = await _wait_pm(uid)
+        if reply is None:
+            return await _show(msg, uid, "grp", _note(False, "Timed out."))
+        fwd = getattr(reply, "forward_from_chat", None) or getattr(
+            getattr(reply, "forward_origin", None), "chat", None
+        )
+        chat = await chat_info(str(fwd.id) if fwd else (reply.text or "").strip())
+        if chat is None:
+            return await _show(msg, uid, "grp", _note(False, "I can't open that chat. Add the bot to the group and use the -100… ID or @username."))
+        update_user_ldata(chat.id, "AUTH", True)
+        if Config.DATABASE_URL:
+            await database.update_user_data(chat.id)
+        return await _show(msg, uid, "grp", _note(True, f"{escape(chat.title or str(chat.id))} can use the bot now."))
+    if action == "grp_rm":
+        try:
+            cid = int(arg)
+        except ValueError:
+            return await _show(msg, uid, "grp")
+        if cid in user_data and user_data[cid].get("AUTH"):
+            update_user_ldata(cid, "AUTH", False)
+            if Config.DATABASE_URL:
+                await database.update_user_data(cid)
+            return await _show(msg, uid, "grp", _note(True, "Group removed."))
+        return await _show(msg, uid, "grp")
     # force join
     if action == "fj_add":
         await edit_message(msg, f"{e('key')} <i>Waiting for the channel/group in private chat…</i>")
