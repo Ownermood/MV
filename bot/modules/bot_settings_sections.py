@@ -78,7 +78,7 @@ SECTIONS = {
         "LOGIN_PASS", "FORCE_SUB_IDS", "FORCE_SUB_CHATS", "CLONE_TG_LIMIT", *LIMIT_VARS,
     ]),
     "logs": ("bell", "Logs", "log chats, RSS", [
-        "LEECH_LOG_CHAT", "MIRROR_LOG_ID", "LINKS_LOG_ID", "RSS_CHAT", "RSS_DELAY",
+        "ERROR_LOG_CHAT", "LEECH_LOG_CHAT", "MIRROR_LOG_ID", "LINKS_LOG_ID", "RSS_CHAT", "RSS_DELAY",
         "ENABLE_TELEMETRY",
     ]),
     "adv": ("gear", "Advanced", "speed, memory, proxy, plugins, rest", []),

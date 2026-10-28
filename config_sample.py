@@ -211,6 +211,7 @@ TMDB_ACCESS_TOKEN = ""
 AUTO_THUMBNAIL = False
 
 # Log Channels
+ERROR_LOG_CHAT = ""  # chat/channel ID for full task error details; the group then gets only a short reason
 LEECH_LOG_CHAT = ""
 # Named leech dump chats, selectable per task with the -ud flag.
 # The chosen chat becomes the primary upload destination for the task.

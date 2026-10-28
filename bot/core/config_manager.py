@@ -115,6 +115,7 @@ class Config:
     ARCHIVE_LIMIT = 0
     STORAGE_LIMIT = 0
     LEECH_LOG_CHAT = ""
+    ERROR_LOG_CHAT = ""
     LEECH_DUMP_CHATS = {}
     LINKS_LOG_ID = ""
     MIRROR_LOG_ID = ""

@@ -72,6 +72,34 @@ from ..telegram_helper.message_utils import (
 )
 
 
+# known errors -> what the user should read in the group
+_FRIENDLY_ERRORS = (
+    ("cannotDownloadFile", "The Drive owner has blocked downloads for this file."),
+    ("downloadQuotaExceeded", "Google's download limit for this file is reached. Try again later."),
+    ("userRateLimitExceeded", "Google rate limit reached. Try again in a while."),
+    ("storageQuotaExceeded", "The destination Drive is full."),
+    ("File not found", "File not found, or not shared with the bot's Google account."),
+    ("notFound", "File not found, or not shared with the bot's Google account."),
+    ("Google Drive is not set up", "Google Drive is not set up on this bot yet."),
+    ("NO TOKEN", "Google Drive is not set up on this bot yet."),
+)
+
+
+def short_reason(error):
+    text = " ".join(str(error).split())
+    for key, nice in _FRIENDLY_ERRORS:
+        if key.casefold() in text.casefold():
+            return nice
+    return text if len(text) <= 160 else text[:157] + "…"
+
+
+def _chat_ref(value):
+    value = str(value or "").strip()
+    if not value:
+        return None
+    return int(value) if value.lstrip("-").isdigit() else value
+
+
 def _dm_button():
     buttons = ButtonMaker()
     buttons.url_button(
@@ -716,13 +744,32 @@ class TaskListener(TaskConfig):
 <b>Upload:</b> {upload_text(self.mode)}</blockquote>
 {error}"""
             if is_limit
-            else f"""{e('warn')} <b>Task Stopped</b>
-<blockquote><b>Reason:</b> {escape(str(error))}
-<b>Size:</b> {get_readable_file_size(self.size)}
-<b>Time:</b> {get_readable_time(time() - self.message.date.timestamp())}
-<b>Upload:</b> {upload_text(self.mode)}
-<b>User:</b> {self.tag}</blockquote>"""
+            else None
         )
+        if msg is None:
+            details = (
+                f"<b>Size:</b> {get_readable_file_size(self.size)}\n"
+                f"<b>Time:</b> {get_readable_time(time() - self.message.date.timestamp())}\n"
+                f"<b>Upload:</b> {upload_text(self.mode)}\n"
+                f"<b>User:</b> {self.tag}"
+            )
+            full = (
+                f"{e('warn')} <b>Task Stopped</b>\n"
+                f"<blockquote><b>Name:</b> {escape(self.name or '-')}\n"
+                f"<b>Reason:</b> {escape(str(error))}\n{details}</blockquote>"
+            )
+            # the group only gets a short reason; details go to the log chat and DM
+            msg = (
+                f"{e('warn')} <b>Task Stopped</b>\n"
+                f"<blockquote><b>Reason:</b> {escape(short_reason(error))}\n{details}</blockquote>"
+            )
+            if log_chat := _chat_ref(Config.ERROR_LOG_CHAT):
+                await send_message(
+                    log_chat, f"{full}\n<a href='{self.message.link}'>Task message</a>"
+                    if self.is_super_chat else full,
+                )
+            if self.bot_pm and self.is_super_chat:
+                await send_message(self.user_id, full)
 
         await send_message(self.message, msg, button)
         await delete_links(self.message)
