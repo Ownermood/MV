@@ -50,7 +50,8 @@ class BM:
     def url_button(s, key, link, position=None, style=None, icon=None): s.urls.append((key, link, style))
 FS = [{"id": "-1", "name": "Villan Community", "link": "https://t.me/VillanCommunity"}, {"id": "-2", "name": "", "link": ""}]
 ns["fsub_chats"] = lambda: FS
-for links, want_ in (({"A": "https://a"}, [("A", "https://a", None)]), ({}, [("Villan Community", "https://t.me/VillanCommunity", None)])):
+ns["ButtonStyle"] = types.SimpleNamespace(SUCCESS="success")
+for links, want_ in (({"A": "https://a"}, [("A", "https://a", "success")]), ({}, [("Villan Community", "https://t.me/VillanCommunity", "success")])):
     Cfg.START_LINKS = links; bm = BM(); ns["_start_links"](bm, None)
     good = bm.urls == want_; ok &= good
     print(f"{'PASS' if good else 'FAIL'} start links {links or 'empty -> force join chats'}: {bm.urls}")

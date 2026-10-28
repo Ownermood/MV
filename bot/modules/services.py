@@ -83,12 +83,12 @@ def start_photo():
 def _start_links(buttons, lang):
     links = Config.START_LINKS if isinstance(Config.START_LINKS, dict) else {}
     for label_, url in links.items():
-        buttons.url_button(str(label_), str(url), "f_body")
+        buttons.url_button(str(label_), str(url), "f_body", ButtonStyle.SUCCESS)
     if not links:
         # no custom links: show the force join chats (channel + bot group)
         for chat in fsub_chats():
             if chat["name"] and chat["link"]:
-                buttons.url_button(chat["name"], chat["link"], "f_body")
+                buttons.url_button(chat["name"], chat["link"], "f_body", ButtonStyle.SUCCESS)
 
 
 def view_only(user_id, chat):

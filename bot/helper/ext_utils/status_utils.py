@@ -1,6 +1,5 @@
 from asyncio import gather, iscoroutinefunction
 from html import escape
-from pyrogram.enums import ButtonStyle
 from re import findall
 from time import time
 
@@ -16,6 +15,7 @@ from ... import (
 )
 from ...core.config_manager import Config
 from ..telegram_helper.button_build import ButtonMaker
+from ..telegram_helper.emoji import e, icon, label as btn_label
 
 SIZE_UNITS = ["B", "KB", "MB", "GB", "TB", "PB"]
 
@@ -38,6 +38,18 @@ class MirrorStatus:
     STATUS_YT = "YouTube"
     STATUS_METADATA = "Metadata"
     STATUS_SEEDR = "Seedr"
+
+
+STATUS_ICONS = {
+    MirrorStatus.STATUS_DOWNLOAD: "download",
+    MirrorStatus.STATUS_UPLOAD: "upload",
+    MirrorStatus.STATUS_SEED: "upload",
+    MirrorStatus.STATUS_CLONE: "folder",
+    MirrorStatus.STATUS_PAUSED: "clock",
+    MirrorStatus.STATUS_QUEUEDL: "clock",
+    MirrorStatus.STATUS_QUEUEUP: "clock",
+    MirrorStatus.STATUS_YT: "video",
+}
 
 
 class EngineStatus:
@@ -201,14 +213,8 @@ def speed_string_to_bytes(size_text: str):
 
 def get_progress_bar_string(pct):
     pct = float(str(pct).strip("%"))
-    p = min(max(pct, 0), 100)
-    cFull = int(p // 8)
-    cPart = int(p % 8 - 1)
-    p_str = "■" * cFull
-    if cPart >= 0:
-        p_str += ["▤", "▥", "▦", "▧", "▨", "▩", "■"][cPart]
-    p_str += "□" * (12 - cFull)
-    return f"[{p_str}]"
+    filled = round(min(max(pct, 0), 100) / 10)
+    return "▰" * filled + "▱" * (10 - filled)
 
 
 async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=1):
@@ -228,6 +234,8 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
         status_dict[sid]["page_no"] = page_no
     start_position = (page_no - 1) * STATUS_LIMIT
 
+    from ..telegram_helper.bot_commands import BotCommands
+
     for index, task in enumerate(
         tasks[start_position : STATUS_LIMIT + start_position], start=1
     ):
@@ -237,89 +245,97 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
             tstatus = await task.status()
         else:
             tstatus = task.status()
-        msg += f"<b>{index + start_position}.</b> "
-        msg += f"<b><i>{escape(f'{task.name()}')}</i></b>"
-        if task.listener.subname:
-            msg += f"\n┖ <b>Sub Name</b> → <i>{task.listener.subname}</i>"
-        elapsed = time() - task.listener.message.date.timestamp()
-
-        msg += f"\n\n<b>Task By {task.listener.message.from_user.mention(style='html')} </b> ( #ID{task.listener.message.from_user.id} )"
-        if task.listener.is_super_chat:
-            msg += f" <i>[<a href='{task.listener.message.link}'>Link</a>]</i>"
-
+        listener = task.listener
+        user = listener.message.from_user
+        elapsed = time() - listener.message.date.timestamp()
+        msg += f"{e(STATUS_ICONS.get(tstatus, 'gear'))} <b>{index + start_position}. {escape(f'{task.name()}')}</b>"
+        if listener.subname:
+            msg += f"\n<i>↳ {escape(listener.subname)}</i>"
+        rows = []
         if (
             tstatus not in [MirrorStatus.STATUS_SEED, MirrorStatus.STATUS_QUEUEUP]
-            and task.listener.progress
+            and listener.progress
         ):
             progress = task.progress()
-            msg += f"\n┟ {get_progress_bar_string(progress)} <i>{progress}</i>"
-            if task.listener.subname:
-                subsize = f" / {get_readable_file_size(task.listener.subsize)}"
-                ac = len(task.listener.files_to_proceed)
-                count = f"( {task.listener.proceed_count} / {ac or '?'} )"
-            else:
-                subsize = ""
-                count = ""
-            msg += f"\n┠ <b>Processed</b> → <i>{task.processed_bytes()}{subsize} of {task.size()}</i>"
-            if count:
-                msg += f"\n┠ <b>Count:</b> → <b>{count}</b>"
-            msg += f"\n┠ <b>Status</b> → <b>{tstatus}</b>"
-            msg += f"\n┠ <b>Speed</b> → <i>{task.speed()}</i>"
-            msg += f"\n┠ <b>Time</b> → <i>{task.eta()} of {get_readable_time(elapsed + get_raw_time(task.eta()))} ( {get_readable_time(elapsed)} )</i>"
+            rows.append(f"{get_progress_bar_string(progress)}  <b>{progress}</b>")
+            subsize = (
+                f" / {get_readable_file_size(listener.subsize)}"
+                if listener.subname
+                else ""
+            )
+            rows.append(
+                f"<b>{tstatus}</b> · {task.processed_bytes()}{subsize} of {task.size()}"
+            )
+            if listener.subname:
+                ac = len(listener.files_to_proceed)
+                rows.append(f"<b>Files:</b> {listener.proceed_count} / {ac or '?'}")
+            rows.append(
+                f"{e('bolt')} {task.speed()}  ·  {e('clock')} {task.eta()} left"
+                f"  ·  {get_readable_time(elapsed)} gone"
+            )
             if tstatus == MirrorStatus.STATUS_DOWNLOAD and (
-                task.listener.is_torrent or task.listener.is_qbit
+                listener.is_torrent or listener.is_qbit
             ):
                 try:
-                    msg += f"\n┠ <b>Seeders</b> → {task.seeders_num()} | <b>Leechers</b> → {task.leechers_num()}"
+                    rows.append(
+                        f"{e('globe')} Seeders {task.seeders_num()} · Leechers {task.leechers_num()}"
+                    )
                 except Exception:
                     pass
-            # TODO: Add Connected Peers
         elif tstatus == MirrorStatus.STATUS_SEED:
-            msg += f"\n┠ <b>Size</b> → <i>{task.size()}</i> | <b>Uploaded</b>  → <i>{task.uploaded_bytes()}</i>"
-            msg += f"\n┠ <b>Status</b> → <b>{tstatus}</b>"
-            msg += f"\n┠ <b>Speed</b> → <i>{task.seed_speed()}</i>"
-            msg += f"\n┠ <b>Ratio</b> → <i>{task.ratio()}</i>"
-            msg += f"\n┠ <b>Time</b> → <i>{task.seeding_time()}</i> | <b>Elapsed</b> → <i>{get_readable_time(elapsed)}</i>"
+            rows.append(
+                f"<b>{tstatus}</b> · {task.size()} · uploaded {task.uploaded_bytes()}"
+            )
+            rows.append(f"{e('bolt')} {task.seed_speed()}  ·  Ratio {task.ratio()}")
+            rows.append(
+                f"{e('clock')} Seeding {task.seeding_time()}  ·  {get_readable_time(elapsed)} gone"
+            )
         else:
-            msg += f"\n┠ <b>Size</b> → <i>{task.size()}</i>"
-        msg += f"\n┠ <b>Engine</b> → <i>{task.engine}</i>"
-        msg += f"\n┠ <b>In Mode</b> → <i>{task.listener.mode[0]}</i>"
-        msg += f"\n┠ <b>Out Mode</b> → <i>{task.listener.mode[1]}</i>"
-        from ..telegram_helper.bot_commands import BotCommands
-
+            rows.append(f"<b>{tstatus}</b> · {task.size()}")
+        rows.append(
+            f"{e('gear')} {task.engine}  ·  {listener.mode[0]} → {listener.mode[1]}"
+        )
+        by = f"{e('users')} {user.mention(style='html')} · <code>{user.id}</code>"
+        if listener.is_super_chat:
+            by += f" · <a href='{listener.message.link}'>Link</a>"
+        rows.append(by)
+        msg += "\n<blockquote>" + "\n".join(rows) + "</blockquote>\n"
         if tstatus in [
             MirrorStatus.STATUS_DOWNLOAD,
             MirrorStatus.STATUS_PAUSED,
             MirrorStatus.STATUS_QUEUEDL,
-        ]:
-            if (
-                task.listener.is_torrent
-                or task.listener.is_qbit
-                or task.listener.is_nzb
-            ):
-                msg += f"\n┠ <b>Select</b> → /{BotCommands.SelectCommand[1]}_{task.gid()[:8]}"
-
-        msg += f"\n<b>┖ Stop</b> → <i>/{BotCommands.CancelTaskCommand[1]}_{task.gid()[:8]}</i>\n\n"
+        ] and (listener.is_torrent or listener.is_qbit or listener.is_nzb):
+            msg += f"{e('list')} Select: /{BotCommands.SelectCommand[1]}_{task.gid()[:8]}\n"
+        msg += f"{e('close')} Stop: /{BotCommands.CancelTaskCommand[1]}_{task.gid()[:8]}\n\n"
 
     if len(msg) == 0:
         if status == "All":
             return None, None
         else:
-            msg = f"No Active {status} Tasks!\n\n"
+            msg = f"{e('info')} No active <b>{status}</b> tasks.\n\n"
 
-    msg += "⌬ <b><u>Bot Stats</u></b>"
     buttons = ButtonMaker()
     if not is_user:
         buttons.data_button(
-            "📜 TStats",
+            btn_label("chart", "Stats"),
             f"status {sid} ov",
             position="header",
-            style=ButtonStyle.PRIMARY,
+            icon=icon("chart"),
         )
+    buttons.data_button(
+        btn_label("bolt", "Refresh"),
+        f"status {sid} ref",
+        position="header",
+        icon=icon("bolt"),
+    )
     if len(tasks) > STATUS_LIMIT:
-        msg += f"<b>Page:</b> {page_no}/{pages} | <b>Tasks:</b> {tasks_no} | <b>Step:</b> {page_step}\n"
-        buttons.data_button("<<", f"status {sid} pre", position="header")
-        buttons.data_button(">>", f"status {sid} nex", position="header")
+        msg += f"{e('list')} <b>Page</b> {page_no}/{pages} · <b>Tasks</b> {tasks_no} · <b>Step</b> {page_step}\n"
+        buttons.data_button(
+            btn_label("prev", "Prev"), f"status {sid} pre", position="header", icon=icon("prev")
+        )
+        buttons.data_button(
+            btn_label("next", "Next"), f"status {sid} nex", position="header", icon=icon("next")
+        )
         if tasks_no > 30:
             for i in [1, 2, 4, 6, 8, 10, 15]:
                 buttons.data_button(i, f"status {sid} ps {i}", position="footer")
@@ -327,10 +343,12 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
         for label, status_value in list(STATUSES.items()):
             if status_value != status:
                 buttons.data_button(label, f"status {sid} st {status_value}")
-    buttons.data_button(
-        "♻️ Refresh", f"status {sid} ref", position="header", style=ButtonStyle.PRIMARY
-    )
     button = buttons.build_menu(8)
-    msg += f"\n┟ <b>CPU</b> → {cpu_percent()}% | <b>F</b> → {get_readable_file_size(disk_usage(DOWNLOAD_DIR).free)} [{round(100 - disk_usage(DOWNLOAD_DIR).percent, 1)}%]"
-    msg += f"\n┖ <b>RAM</b> → {virtual_memory().percent}% | <b>UP</b> → {get_readable_time(time() - bot_start_time)}"
+    free = disk_usage(DOWNLOAD_DIR)
+    msg += (
+        f"{e('chart')} <b>Bot Stats</b>\n"
+        f"<blockquote>{e('server')} CPU {cpu_percent()}%  ·  RAM {virtual_memory().percent}%\n"
+        f"{e('folder')} Free {get_readable_file_size(free.free)} ({round(100 - free.percent, 1)}%)"
+        f"  ·  {e('clock')} Up {get_readable_time(time() - bot_start_time)}</blockquote>"
+    )
     return msg, button

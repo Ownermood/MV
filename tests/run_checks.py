@@ -42,6 +42,7 @@ CHECKS = [
     ("admin panel", "check_admin_panel.py", [REPO], None),
     ("force join", "check_force_join.py", [REPO], None),
     ("force join auto-verify", "check_auto_verify.py", [REPO], None),
+    ("status card", "check_status_card.py", [REPO], None),
 ]
 
 failed = []
