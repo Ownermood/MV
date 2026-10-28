@@ -2,13 +2,14 @@
 from asyncio import Event, TimeoutError as AsyncTimeout, wait_for
 from html import escape
 from time import time
+from types import SimpleNamespace
 
 from pyrogram.enums import ButtonStyle, ChatMemberStatus
 from pyrogram.filters import private, user
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import BotCommandScopeChat, Message
 
-from .. import auth_chats, bot_start_time, sudo_users, task_dict, user_data
+from .. import LOGGER, auth_chats, bot_start_time, sudo_users, task_dict, user_data
 from ..core.config_manager import Config
 from ..core.tg_client import TgClient
 from ..helper.ext_utils.bot_utils import new_task, update_user_ldata
@@ -351,10 +352,15 @@ async def _usr_page(uid, note=""):
 
 
 async def _ask_person(uid, what):
-    """(user id, telegram name) from an ID, @username or forwarded message."""
+    """(user id, telegram name, given name) from "Name ID", an ID, @username
+    or a forwarded message. given name is "" when only the person was sent."""
     sent = await send_message(
         uid,
-        f"{e('users')} Send the {what}'s user ID, @username, or forward one of their messages.",
+        f"{e('users')} <b>Add {what}</b>\n\n"
+        f"Send the name and user ID of the new {what}, e.g.\n"
+        "<code>Wifu 8494053059</code>\n"
+        "<i>You can also send just the ID, an @username, or forward one of their messages.</i>\n\n"
+        f"{e('info')} They should /start the bot first.",
     )
     if isinstance(sent, str):
         return None, "Start the bot in private chat first, then try again."
@@ -364,17 +370,26 @@ async def _ask_person(uid, what):
     person = getattr(reply, "forward_from", None) or getattr(
         getattr(reply, "forward_origin", None), "sender_user", None
     )
+    given = ""
     if person is None:
         ref = (reply.text or "").strip()
         if not ref:
             return None, "Send an ID, @username or a forwarded message."
+        # "Wifu 8494053059": name first, the ID or @username last
+        if " " in ref:
+            given, ref = ref.rsplit(None, 1)
+            given = given.strip()[:32]
+        numeric = ref.lstrip("-").isdigit()
         try:
-            person = await TgClient.bot.get_users(int(ref) if ref.lstrip("-").isdigit() else ref)
+            person = await TgClient.bot.get_users(int(ref) if numeric else ref)
         except Exception:
-            return None, "User not found. They must have started the bot, or use their numeric ID."
+            if not numeric:
+                return None, "User not found. They must have started the bot, or use their numeric ID."
+            # unknown to the bot yet (never started it): the ID still works
+            person = SimpleNamespace(id=int(ref), first_name="", is_bot=False)
     if getattr(person, "is_bot", False) or person.id <= 0:
         return None, "That is not a user."
-    return (person.id, person.first_name or ""), None
+    return (person.id, person.first_name or "", given), None
 
 
 async def _ask_name(uid, default):
@@ -387,6 +402,14 @@ async def _ask_name(uid, default):
     if not text or text.startswith("/"):
         return default
     return text[:32]
+
+
+async def _tell(cid, text):
+    """DM a user; ignored when they never started the bot."""
+    try:
+        await TgClient.bot.send_message(cid, text)
+    except Exception as err:
+        LOGGER.info(f"Admin panel: could not message {cid}: {err}")
 
 
 async def _set_admin(cid, on):
@@ -587,11 +610,19 @@ async def admin_panel_cb(_, query):
         found, err = await _ask_person(uid, what)
         if err:
             return await _show(msg, uid, page, _note(False, err))
-        cid, tg_name = found
-        name = await _ask_name(uid, tg_name)
+        cid, tg_name, name = found
+        if not name:
+            name = await _ask_name(uid, tg_name)
         update_user_ldata(cid, "PANEL_NAME", name)
         if action == "adm_add":
             await _set_admin(cid, True)
+            await _tell(
+                cid,
+                f"{e('party')} <b>You are now an admin</b> of <b>Mirror Leech Villan Bot</b>!\n"
+                f"<blockquote>{e('gem')} Tag: <b>{escape(name or tg_name or 'Admin')}</b>\n"
+                f"{e('users')} Added by the owner</blockquote>\n"
+                f"{e('gear')} Open /admin for the admin panel. All commands are in your menu now.",
+            )
         else:
             update_user_ldata(cid, "AUTH", True)
             if Config.DATABASE_URL:
@@ -606,6 +637,10 @@ async def admin_panel_cb(_, query):
             if cid == Config.OWNER_ID or not user_data.get(cid, {}).get("SUDO"):
                 return await _show(msg, uid, "admins")
             await _set_admin(cid, False)
+            await _tell(
+                cid,
+                f"{e('info')} You are <b>no longer an admin</b> of <b>Mirror Leech Villan Bot</b>.",
+            )
             return await _show(msg, uid, "admins", _note(True, "Admin removed."))
         if action == "adm_name":
             await edit_message(msg, f"{e('edit')} <i>Waiting for the new name in private chat…</i>")

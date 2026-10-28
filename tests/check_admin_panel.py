@@ -32,7 +32,9 @@ class Bot:
     premium_ok = False
     def add_handler(self, h, group=0): self.h = h; return (h, group)
     def remove_handler(self, *a): pass
+    dms = []
     async def send_message(self, uid, text, reply_markup=None):
+        Bot.dms.append((uid, text))
         if "Premium emoji test" in text and Bot.premium_ok == "error": raise RuntimeError("BUTTON_ICON_INVALID")
         ents = [types.SimpleNamespace(custom_emoji_id="1")] if Bot.premium_ok is True else []
         return Msg(text, entities=ents)
@@ -52,7 +54,7 @@ bc_calls = []
 async def run_broadcast(rply, reply_to, forwarded=False, quietly=False): bc_calls.append((rply, quietly)); return "bc9"
 udata = {}
 def update_user_ldata(cid, k, v): udata.setdefault(cid, {})[k] = v
-mod("bot", sudo_users=[55], bot_start_time=0, task_dict={1: 1}, auth_chats={-1009: []}, user_data=udata); mod("bot.core"); mod("bot.core.config_manager", Config=Cfg)
+mod("bot", LOGGER=types.SimpleNamespace(info=print, warning=print, error=print), sudo_users=[55], bot_start_time=0, task_dict={1: 1}, auth_chats={-1009: []}, user_data=udata); mod("bot.core"); mod("bot.core.config_manager", Config=Cfg)
 mod("bot.core.tg_client", TgClient=types.SimpleNamespace(bot=bot))
 mod("bot.helper"); mod("bot.helper.ext_utils")
 mod("bot.helper.ext_utils.bot_utils", new_task=lambda f: f, update_user_ldata=update_user_ldata); mod("bot.helper.ext_utils.db_handler", database=DB())
@@ -168,11 +170,16 @@ async def main():
     t("admins page: owner, config and panel admins", "Tommy" in m.text and "from config" in m.text and "<code>55</code>" in m.text and "owner" in m.text and valid(m.text, m.markup))
     t("only panel admins have remove buttons", [r[1] for r in m.markup if "adm_rm" in r[1]] == ["adm 7 adm_rm 123"])
     pm_queue.append(Msg(text="Tom B")); await click("adm 7 adm_name 123"); t("admin renamed", udata[123]["PANEL_NAME"] == "Tom B")
+    t("new admin gets a DM", any(u == 123 and "You are now an admin" in x and "Tommy" in x for u, x in Bot.dms))
+    pm_queue.append(Msg(text="Wifu 8494053059")); await click("adm 7 adm_add")
+    t("'Name ID' in one message, ID unknown to the bot still works", udata[8494053059].get("SUDO") is True and udata[8494053059]["PANEL_NAME"] == "Wifu" and not pm_queue)
+    t("prompt shows the Name ID example", any("Wifu 8494053059" in x for _, x, _ in sent))
     sudo_m = Msg(); q = Q("adm 8 adm_add", sudo_m, 8); await ap.admin_panel_cb(None, q)
     t("sudo cannot add admins", "Only the owner" in sudo_m.text and len(pm_queue) == 0)
     await click("adm 7 adm_rm 7"); t("owner cannot be removed", "removed" not in m.text)
     await click("adm 7 adm_rm 123")
     t("admin removed and their command menu cleared", udata[123]["SUDO"] is False and 123 in Bot.cmd_scopes_deleted)
+    t("removed admin gets a DM", any(u == 123 and "no longer an admin" in x for u, x in Bot.dms))
     fwd = Msg(text=""); fwd.forward_from = types.SimpleNamespace(id=456, first_name="Ann", is_bot=False)
     pm_queue.extend([fwd, Msg(text="/skip")]); await click("adm 7 usr_add")
     t("user allowed from a forward, Telegram name kept", udata[456].get("AUTH") is True and udata[456]["PANEL_NAME"] == "Ann")
