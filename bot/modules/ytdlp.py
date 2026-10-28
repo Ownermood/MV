@@ -1,3 +1,5 @@
+from html import escape
+from re import match as re_match
 from asyncio import Event, wait_for
 from ast import literal_eval
 from functools import partial
@@ -26,6 +28,20 @@ from ..helper.mirror_leech_utils.download_utils.yt_dlp_download import (
     get_cookie_file,
 )
 from ..helper.telegram_helper.button_build import ButtonMaker
+from ..helper.telegram_helper.emoji import e as emoji
+
+_CODECS = {"mp4a": "AAC", "opus": "Opus", "vorbis": "Vorbis", "mp3": "MP3", "flac": "FLAC", "ac-3": "AC3", "ec-3": "EAC3"}
+
+
+def _format_label(b_name, size=0):
+    """Short button text: '1080p60 · mp4 (45MB)', '🎵 AAC · m4a (3MB)'."""
+    name, _, ext = b_name.rpartition("-")
+    if re_match(r"^\d+p\d*$", name):
+        text = f"{name} · {ext}"
+    else:
+        codec = name.split(".")[0].lower()
+        text = f"🎵 {_CODECS.get(codec, name[:10])} · {ext}"
+    return f"{text} ({get_readable_file_size(size)})" if size else text
 from ..helper.telegram_helper.error_report import report_task_error
 from ..helper.telegram_helper.message_utils import (
     auto_delete_message,
@@ -167,7 +183,7 @@ class YtSelection:
             buttons.data_button("Best Audios", "ytq ba/b")
             buttons.data_button("Cancel", "ytq cancel", "footer")
             self._main_buttons = buttons.build_menu(3)
-            msg = f"Choose Playlist Videos Quality:\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+            msg = self._ask("video", "Choose Playlist Videos Quality")
         else:
             format_dict = result.get("formats")
             if format_dict is not None:
@@ -210,17 +226,19 @@ class YtSelection:
                 for b_name, tbr_dict in self.formats.items():
                     if len(tbr_dict) == 1:
                         tbr, v_list = next(iter(tbr_dict.items()))
-                        buttonName = f"{b_name} ({get_readable_file_size(v_list[0])})"
-                        buttons.data_button(buttonName, f"ytq sub {b_name} {tbr}")
+                        buttons.data_button(
+                            _format_label(b_name, v_list[0]), f"ytq sub {b_name} {tbr}"
+                        )
                     else:
-                        buttons.data_button(b_name, f"ytq dict {b_name}")
-            buttons.data_button("MP3", "ytq mp3")
-            buttons.data_button("Audio Formats", "ytq audio")
-            buttons.data_button("Best Video", "ytq bv*+ba/b")
-            buttons.data_button("Best Audio", "ytq ba/b")
+                        buttons.data_button(_format_label(b_name), f"ytq dict {b_name}")
+            # one quality per row so the whole label shows; extras two per row
+            buttons.data_button("MP3", "ytq mp3", "f_body")
+            buttons.data_button("Audio Formats", "ytq audio", "f_body")
+            buttons.data_button("Best Video", "ytq bv*+ba/b", "f_body")
+            buttons.data_button("Best Audio", "ytq ba/b", "f_body")
             buttons.data_button("Cancel", "ytq cancel", "footer")
-            self._main_buttons = buttons.build_menu(2)
-            msg = f"Choose Video Quality:\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+            self._main_buttons = buttons.build_menu(1)
+            msg = self._ask("video", "Choose Video Quality")
         self._reply_to = await send_message(
             self.listener.message, msg, self._main_buttons
         )
@@ -229,23 +247,30 @@ class YtSelection:
             await delete_message(self._reply_to)
         return self.qual
 
+    def _ask(self, icon_name, title, note=""):
+        left = get_readable_time(self._timeout - (time() - self._time))
+        note = f"<i>{note}</i>\n" if note else ""
+        return f"{emoji(icon_name)} <b>{escape(title)}</b>\n{note}⏳ <i>Time left: {left}</i>"
+
     async def back_to_main(self):
         if self._is_playlist:
-            msg = f"Choose Playlist Videos Quality:\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+            msg = self._ask("video", "Choose Playlist Videos Quality")
         else:
-            msg = f"Choose Video Quality:\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+            msg = self._ask("video", "Choose Video Quality")
         await edit_message(self._reply_to, msg, self._main_buttons)
 
     async def qual_subbuttons(self, b_name):
         buttons = ButtonMaker()
         tbr_dict = self.formats[b_name]
         for tbr, d_data in tbr_dict.items():
-            button_name = f"{tbr}K ({get_readable_file_size(d_data[0])})"
+            button_name = f"{round(float(tbr))}K" + (
+                f" ({get_readable_file_size(d_data[0])})" if d_data[0] else ""
+            )
             buttons.data_button(button_name, f"ytq sub {b_name} {tbr}")
         buttons.data_button("Back", "ytq back", "footer")
         buttons.data_button("Cancel", "ytq cancel", "footer")
         subbuttons = buttons.build_menu(2)
-        msg = f"Choose Bit rate for <b>{b_name}</b>:\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+        msg = self._ask("video", f"Choose Bitrate for {_format_label(b_name)}")
         await edit_message(self._reply_to, msg, subbuttons)
 
     async def mp3_subbuttons(self):
@@ -258,7 +283,7 @@ class YtSelection:
         buttons.data_button("Back", "ytq back")
         buttons.data_button("Cancel", "ytq cancel")
         subbuttons = buttons.build_menu(3)
-        msg = f"Choose mp3 Audio{i} Bitrate:\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+        msg = self._ask("play", f"Choose MP3 Audio{i} Bitrate")
         await edit_message(self._reply_to, msg, subbuttons)
 
     async def audio_format(self):
@@ -270,7 +295,7 @@ class YtSelection:
         buttons.data_button("Back", "ytq back", "footer")
         buttons.data_button("Cancel", "ytq cancel", "footer")
         subbuttons = buttons.build_menu(3)
-        msg = f"Choose Audio{i} Format:\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+        msg = self._ask("play", f"Choose Audio{i} Format")
         await edit_message(self._reply_to, msg, subbuttons)
 
     async def audio_quality(self, format):
@@ -282,7 +307,7 @@ class YtSelection:
         buttons.data_button("Back", "ytq aq back")
         buttons.data_button("Cancel", "ytq cancel")
         subbuttons = buttons.build_menu(5)
-        msg = f"Choose Audio{i} Quality:\n0 is best and 10 is worst\nTimeout: {get_readable_time(self._timeout - (time() - self._time))}"
+        msg = self._ask("play", f"Choose Audio{i} Quality", "0 is best and 10 is worst")
         await edit_message(self._reply_to, msg, subbuttons)
 
 
