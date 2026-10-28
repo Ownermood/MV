@@ -5,6 +5,11 @@ from mega import MegaApi, MegaError, MegaListener, MegaRequest
 
 from .bot_utils import sync_to_async
 from .status_utils import get_readable_file_size
+from ..telegram_helper.emoji import e as emoji
+
+
+def _mega_card(body):
+    return f"{emoji('server')} <b>Mega Account Info</b>\n<blockquote>{body}</blockquote>"
 
 
 class MegaAccountListener(MegaListener):
@@ -165,7 +170,7 @@ def _get_mega_account_info_sync(email: str, password: str) -> str:
     from time import sleep, gmtime, strftime
 
     if not email or not password:
-        return "⌬ <b>Mega Account Info</b>\n│\n┖ <i>No credentials configured.</i>"
+        return _mega_card("<i>No credentials configured.</i>")
 
     base_dir = mkdtemp(prefix=".mega_account_")
 
@@ -197,16 +202,14 @@ def _get_mega_account_info_sync(email: str, password: str) -> str:
                     break
                 sleep(0.1)
             else:
-                return (
-                    f"⌬ <b>Mega Account Info</b>\n│\n┖ {step_name} timed out after 5s"
-                )
+                return _mega_card(f"{step_name} timed out after 5s")
 
             if listener.error:
-                return f"⌬ <b>Mega Account Info</b>\n│\n┖ {step_name} failed: {listener.error}"
+                return _mega_card(f"{step_name} failed: {listener.error}")
 
         info = listener.result
         if not info:
-            return "⌬ <b>Mega Account Info</b>\n│\n┖ No account details available."
+            return _mega_card("No account details available.")
 
         storage_max = info["storage_max"]
         storage_used = info["storage_used"]
@@ -226,44 +229,42 @@ def _get_mega_account_info_sync(email: str, password: str) -> str:
         pro_name = pro_names.get(pro_level, f"Level {pro_level}")
 
         text = (
-            f"⌬ <b>Mega Account Info</b>\n"
-            f"│\n"
-            f"┠ <b>Email</b> → <code>{email}</code>\n"
-            f"┠ <b>Account Type</b> → {pro_name}\n"
+            f"<b>Email</b> → <code>{email}</code>\n"
+            f"<b>Account Type</b> → {pro_name}\n"
         )
         if pro_expiration > 0:
-            text += f"┠ <b>Pro Expires</b> → {strftime('%Y-%m-%d', gmtime(pro_expiration))}\n"
+            text += f"<b>Pro Expires</b> → {strftime('%Y-%m-%d', gmtime(pro_expiration))}\n"
 
         text += (
-            f"┃\n"
-            f"┠ <b>Storage</b> → {get_readable_file_size(storage_used)} / "
+            f"\n"
+            f"<b>Storage</b> → {get_readable_file_size(storage_used)} / "
             f"{get_readable_file_size(storage_max)} ({storage_pct}%)\n"
         )
 
         if transfer_pct is not None:
             text += (
-                f"┠ <b>Transfer</b> → {get_readable_file_size(transfer_used)} / "
+                f"<b>Transfer</b> → {get_readable_file_size(transfer_used)} / "
                 f"{get_readable_file_size(transfer_max)} ({transfer_pct}%)\n"
             )
         else:
-            text += f"┠ <b>Transfer</b> → {get_readable_file_size(transfer_used)} / Unlimited\n"
+            text += f"<b>Transfer</b> → {get_readable_file_size(transfer_used)} / Unlimited\n"
 
         if listener.root_handle is not None:
             try:
                 num_files = info["num_files"]
                 num_folders = info["num_folders"]
                 text += (
-                    f"┃\n┠ <b>Files</b> → {num_files}\n┖ <b>Folders</b> → {num_folders}"
+                    f"\n<b>Files</b> → {num_files}\n<b>Folders</b> → {num_folders}"
                 )
             except Exception:
-                text += "┃\n┖ <b>Files/Folders</b> → N/A"
+                text += "\n<b>Files/Folders</b> → N/A"
         else:
-            text += "┖ <b>Files/Folders</b> → N/A"
+            text += "<b>Files/Folders</b> → N/A"
 
-        return text
+        return _mega_card(text)
 
     except Exception as e:
-        return f"⌬ <b>Mega Account Info</b>\n│\n┖ Error: {e}"
+        return _mega_card(f"Error: {e}")
     finally:
         try:
             api.removeListener(listener)

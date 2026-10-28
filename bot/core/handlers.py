@@ -568,15 +568,26 @@ async def add_handlers():
             )
 
         def _menu(items):
-            return [
-                BotCommand(cmds[0] if isinstance(cmds, list) else cmds, description)
-                for cmd, description in items
-                for cmds in [getattr(BotCommands, f"{cmd}Command", None)]
-                if cmds is not None
-            ]
+            out = []
+            for cmd, description in items:
+                cmds = getattr(BotCommands, f"{cmd}Command", None)
+                if cmds is None:
+                    continue
+                if isinstance(cmds, list):
+                    # "or /m Mirror ..." so the short name shows in the menu too
+                    short = min(cmds[1:], key=len, default=None)
+                    if short:
+                        description = f"or /{short} {description}"
+                    cmds = cmds[0]
+                out.append(BotCommand(cmds, description))
+            return out
 
         # admin commands only appear in the menu of the owner's and sudo users' chats
-        admin_keys = {"Admin", "BotSet", "Log", "Memory", "Restart", "RestartSessions", "Plugins"}
+        admin_keys = {
+            "Admin", "BotSet", "Log", "Memory", "Restart", "RestartSessions", "Plugins",
+            "Users", "Authorize", "UnAuthorize", "AddSudo", "RmSudo", "BlackList",
+            "RmBlackList", "Broadcast",
+        }
         public = [
             (k, v)
             for k, v in BOT_COMMANDS.items()

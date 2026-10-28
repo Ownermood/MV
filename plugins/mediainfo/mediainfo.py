@@ -58,7 +58,7 @@ async def gen_mediainfo(message, link=None, media=None, mmsg=None):
             await aioremove(des_path)
     link_id = (await telegraph.create_page(title="MediaInfo X", content=tc))["path"]
     await temp_send.edit(
-        f"<b>MediaInfo:</b>\n\n➲ <b>Link :</b> https://graph.org/{link_id}",
+        f"ℹ️ <b>MediaInfo</b>\n<blockquote><b>Link:</b> https://graph.org/{link_id}</blockquote>",
         link_preview_options=LinkPreviewOptions(is_disabled=False),
     )
 

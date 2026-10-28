@@ -56,6 +56,7 @@ from ..helper.mirror_leech_utils.telegram_utils.clone import (
     clone_limit,
 )
 from ..helper.telegram_helper.button_build import ButtonMaker
+from ..helper.telegram_helper.emoji import e as emoji
 from ..helper.telegram_helper.prompt import PromptUnreachable
 from ..helper.telegram_helper.error_report import report_task_error
 from ..helper.telegram_helper.message_utils import (
@@ -312,12 +313,11 @@ class Clone(TaskListener):
             if limit_exceeded := await limit_checker(self):
                 await send_message(
                     self.message,
-                    f"""〶 <b><i><u>Limit Breached:</u></i></b>
-│
-┟ <b>Task Size</b> → {get_readable_file_size(self.size)}
-┠ <b>In Mode</b> → {self.mode[0]}
-┠ <b>Out Mode</b> → {self.mode[1]}
-{limit_exceeded}""",
+                    f"""{emoji('warn')} <b>Limit Reached</b>
+<blockquote><b>Task Size</b> → {get_readable_file_size(self.size)}
+<b>In Mode</b> → {self.mode[0]}
+<b>Out Mode</b> → {self.mode[1]}
+{limit_exceeded}</blockquote>""",
                 )
                 return
             await self.on_download_start()

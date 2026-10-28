@@ -13,6 +13,7 @@ from ..helper.ext_utils.links_utils import is_telegram_link, is_url
 from ..helper.ext_utils.split_parts import part_key, part_series, split_trims
 from ..helper.telegram_helper.bot_commands import BotCommands
 from ..helper.telegram_helper.button_build import ButtonMaker
+from ..helper.telegram_helper.emoji import e
 from ..helper.telegram_helper.filters import CustomFilters
 from ..helper.telegram_helper.message_utils import (
     delete_links,
@@ -287,16 +288,17 @@ Unrelated to -m in /mirror and /leech.</i>
 
 
 def _head(title, rows, tag):
-    msg = f"<b><i>{escape(title)}</i></b>\n│"
-    for i, (label, value) in enumerate(rows):
-        edge = "┟" if i == 0 else "┠"
-        msg += f"\n{edge} <b>{label}</b> → {value}"
-    msg += f"\n┖ <b>Task By</b> → {tag}\n\n"
-    return msg
+    lines = [f"<b>{label}</b> → {value}" for label, value in rows]
+    lines.append(f"<b>Task By</b> → {tag}")
+    return (
+        f"{e('play')} <b>{escape(title)}</b>\n<blockquote>"
+        + "\n".join(lines)
+        + "</blockquote>\n\n"
+    )
 
 
 def _done(line):
-    return "〶 <b><u>Action Performed :</u></b>\n" + f"⋗ <i>{line}</i>\n"
+    return f"{e('done')} <b>Action Performed</b>\n<blockquote><i>{line}</i></blockquote>\n"
 
 
 async def _delete_link(message, args):

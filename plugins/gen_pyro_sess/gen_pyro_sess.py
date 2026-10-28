@@ -22,6 +22,7 @@ from bot.core.config_manager import Config
 from bot.helper.ext_utils.bot_utils import new_task
 from bot.helper.ext_utils.status_utils import get_readable_time
 from bot.helper.telegram_helper.button_build import ButtonMaker
+from bot.helper.telegram_helper.emoji import e as emoji
 from bot.helper.telegram_helper.message_utils import (
     send_message,
     edit_message,
@@ -54,39 +55,39 @@ def _stop_btns():
 
 def _header(user_name):
     return (
-        "⌬ <u><i><b>WZGram String Session Generator</b></i></u>\n│\n"
-        f"│ <b>User</b> → <b>{user_name}</b>!"
+        f"{emoji('key')} <b>String Session Generator</b>\n"
+        f"<b>User</b> → <b>{user_name}</b>"
     )
 
 
 def _collected(api_id=None, api_hash=None, phone=None):
     parts = []
     if api_id is not None:
-        parts.append(f"┠ <b>API_ID</b> → <code>{api_id}</code>")
+        parts.append(f"<b>API_ID</b> → <code>{api_id}</code>")
     if api_hash is not None:
         masked = api_hash[:4] + "*" * (len(api_hash) - 4)
-        parts.append(f"┠ <b>API_HASH</b> → <code>{masked}</code>")
+        parts.append(f"<b>API_HASH</b> → <code>{masked}</code>")
     if phone is not None:
-        parts.append(f"┠ <b>Phone</b> → <code>{phone}</code>")
-    return "\n".join(parts) if parts else ""
+        parts.append(f"<b>Phone</b> → <code>{phone}</code>")
+    return f"<blockquote>{chr(10).join(parts)}</blockquote>" if parts else ""
 
 
 def _stop_msg(h, c):
-    return f"{h}\n┃\n" + (
-        f"{c}\n┃\n┖ <b>Process Stopped.</b>" if c else "┖ <b>Process Stopped.</b>"
+    return f"{h}\n" + (
+        f"{c}\n<b>Process Stopped.</b>" if c else "<b>Process Stopped.</b>"
     )
 
 
 def _timeout_msg(h, c):
-    return f"{h}\n┃\n" + (
-        f"{c}\n┃\n┃ <b>Timed Out!</b>\n┖ <i>Process Stopped.</i>"
+    return f"{h}\n" + (
+        f"{c}\n<b>Timed Out!</b>\n<i>Process Stopped.</i>"
         if c
-        else "┃ <b>Timed Out!</b>\n┖ <i>Process Stopped.</i>"
+        else "<b>Timed Out!</b>\n<i>Process Stopped.</i>"
     )
 
 
 def _error_msg(h, c, err):
-    return f"{h}\n┃\n" + (f"{c}\n┃\n┖ {err}" if c else f"┖ {err}")
+    return f"{h}\n" + (f"{c}\n{err}" if c else f"{err}")
 
 
 async def _invoke(user_id, timeout=_TIMEOUT):
@@ -152,11 +153,10 @@ async def gen_pyro_string(_, message):
     if not api_id or not api_hash:
         sess_msg = await send_message(
             message,
-            f"{h}\n┃\n"
-            "┃ <i>Send your <code>API_ID</code> (also known as <code>APP_ID</code>).</i>\n"
-            "┃ <i>Get it from <a href='https://my.telegram.org'>my.telegram.org</a>.</i>\n"
-            "┃\n"
-            f"┖ <b>Timeout:</b> <code>{get_readable_time(_TIMEOUT)}</code>",
+            f"{h}\n"
+            "<i>Send your <code>API_ID</code> (also known as <code>APP_ID</code>).</i>\n"
+            "<i>Get it from <a href='https://my.telegram.org'>my.telegram.org</a>.</i>\n"
+            f"<b>Timeout:</b> <code>{get_readable_time(_TIMEOUT)}</code>",
             btns,
         )
 
@@ -175,10 +175,9 @@ async def gen_pyro_string(_, message):
         await edit_message(
             sess_msg,
             f"{h}\n\n{c}\n\n"
-            "┃ <i>Send your <code>API_HASH</code>.</i>\n"
-            "┃ <i>Get it from <a href='https://my.telegram.org'>my.telegram.org</a>.</i>\n"
-            "┃\n"
-            f"┖ <b>Timeout:</b> <code>{get_readable_time(_TIMEOUT)}</code>",
+            "<i>Send your <code>API_HASH</code>.</i>\n"
+            "<i>Get it from <a href='https://my.telegram.org'>my.telegram.org</a>.</i>\n"
+            f"<b>Timeout:</b> <code>{get_readable_time(_TIMEOUT)}</code>",
             btns,
         )
 
@@ -194,10 +193,9 @@ async def gen_pyro_string(_, message):
     else:
         sess_msg = await send_message(
             message,
-            f"{h}\n┃\n"
-            f"┃ <i>Using <b>API_ID</b> &amp; <b>API_HASH</b> from bot config.</i>\n"
-            "┃\n"
-            f"┖ <b>Timeout:</b> <code>{get_readable_time(_TIMEOUT)}</code>",
+            f"{h}\n"
+            f"<i>Using <b>API_ID</b> &amp; <b>API_HASH</b> from bot config.</i>\n"
+            f"<b>Timeout:</b> <code>{get_readable_time(_TIMEOUT)}</code>",
             btns,
         )
         c = _collected(api_id=api_id, api_hash=api_hash)
@@ -205,9 +203,9 @@ async def gen_pyro_string(_, message):
     while True:
         await edit_message(
             sess_msg,
-            f"{h}\n┃\n{c}\n┃\n"
-            "┃ <i>Send your phone number in International Format.</i>\n"
-            "┖ <b>Example:</b> <code>+14154566376</code>",
+            f"{h}\n{c}\n"
+            "<i>Send your phone number in International Format.</i>\n"
+            "<b>Example:</b> <code>+14154566376</code>",
             btns,
         )
 
@@ -218,9 +216,9 @@ async def gen_pyro_string(_, message):
         c_phone = _collected(api_id=api_id, api_hash=api_hash, phone=phone_no)
         await edit_message(
             sess_msg,
-            f"{h}\n┃\n{c_phone}\n┃\n"
-            f"┃ Is <code>{phone_no}</code> correct?\n"
-            "┖ <b>Send:</b> <code>y</code> / <code>yes</code> | <code>n</code> / <code>no</code>",
+            f"{h}\n{c_phone}\n"
+            f"Is <code>{phone_no}</code> correct?\n"
+            "<b>Send:</b> <code>y</code> / <code>yes</code> | <code>n</code> / <code>no</code>",
             btns,
         )
 
@@ -283,11 +281,10 @@ async def gen_pyro_string(_, message):
 
     await edit_message(
         sess_msg,
-        f"{h}\n┃\n{c}\n┃\n"
-        "┃ <i>OTP sent to your Phone Number.</i>\n"
-        "┃ <i>Enter in <code>1 2 3 4 5</code> format. (Space in between)</i>\n"
-        "┃\n"
-        f"┖ <b>Timeout:</b> <code>{get_readable_time(_TIMEOUT)}</code>",
+        f"{h}\n{c}\n"
+        "<i>OTP sent to your Phone Number.</i>\n"
+        "<i>Enter in <code>1 2 3 4 5</code> format. (Space in between)</i>\n"
+        f"<b>Timeout:</b> <code>{get_readable_time(_TIMEOUT)}</code>",
         btns,
     )
 
@@ -311,11 +308,10 @@ async def gen_pyro_string(_, message):
         hint = await pyro_client.get_password_hint()
         await edit_message(
             sess_msg,
-            f"{h}\n┃\n{c}\n┃\n"
-            "┃ <i>Account is protected with <b>Two-Step Verification</b>.</i>\n"
-            f"┃ <b>Hint:</b> <i>{hint}</i>\n"
-            "┃\n"
-            "┖ <i>Send your Password Now.</i>",
+            f"{h}\n{c}\n"
+            "<i>Account is protected with <b>Two-Step Verification</b>.</i>\n"
+            f"<b>Hint:</b> <i>{hint}</i>\n"
+            "<i>Send your Password Now.</i>",
             btns,
         )
 
@@ -340,7 +336,7 @@ async def gen_pyro_string(_, message):
         session_string = await pyro_client.export_session_string()
         await pyro_client.send_message(
             "me",
-            f"⌬ <b><u>WZGram Session Generated</u></b>\n\n"
+            "🔑 <b>WZGram Session Generated</b>\n\n"
             f"<code>{session_string}</code>\n\n"
             f"<b>WZGram v{wzgram_version} | WZML-X {get_version()}</b>\n"
             f"<b>Via <a href='https://github.com/SilentDemonSD/WZML-X'>WZML-X</a> [ @WZML_X ]</b>",
@@ -349,10 +345,9 @@ async def gen_pyro_string(_, message):
         await _safe_disconnect(pyro_client)
         await edit_message(
             sess_msg,
-            f"{h}\n┃\n{c}\n┃\n"
-            "┠  <b>WZGram Session Generated Successfully!</b>\n"
-            "┃\n"
-            "┖ <i>Check your <b>Saved Messages</b>.</i>",
+            f"{h}\n{c}\n"
+            "<b>WZGram Session Generated Successfully!</b>\n"
+            "<i>Check your <b>Saved Messages</b>.</i>",
         )
     except Exception as e:
         await _safe_disconnect(pyro_client)

@@ -4,6 +4,7 @@ from time import monotonic
 from ... import LOGGER, bot_loop, user_data
 from ...core.config_manager import Config
 from ...core.tg_client import UserSessionPool
+from ..telegram_helper.emoji import e
 from ..telegram_helper.prompt import STOP, ask_in_pm
 from .bot_utils import update_user_ldata
 from .db_handler import database
@@ -170,10 +171,10 @@ class UserSession:
     async def _ask(cls, user_id, record):
         answer = await ask_in_pm(
             user_id,
-            "⌬ <b><u>Unlock Your Session</u></b>\n│\n"
-            "┟ <i>Send the passphrase you sealed it with.</i>\n"
-            "┠ <i>The message is deleted the moment it arrives.</i>\n"
-            "┖ <b>Timeout:</b> <code>120 sec</code>",
+            f"{e('key')} <b>Unlock Your Session</b>\n<blockquote>"
+            "<i>Send the passphrase you sealed it with.</i>\n"
+            "<i>The message is deleted the moment it arrives.</i></blockquote>\n"
+            "⏳ <i>Time left: 120s</i>",
         )
         if answer is None:
             raise TgLinkException("Timed out waiting for your passphrase")

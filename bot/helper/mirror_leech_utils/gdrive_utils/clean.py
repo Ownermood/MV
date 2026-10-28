@@ -14,6 +14,7 @@ from ...ext_utils.status_utils import get_readable_file_size, get_readable_time
 from ...mirror_leech_utils.gdrive_utils.delete import GoogleDriveDelete
 from ...mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
 from ...telegram_helper.button_build import ButtonMaker
+from ...telegram_helper.emoji import e
 from ...telegram_helper.message_utils import (
     delete_message,
     edit_message,
@@ -400,10 +401,10 @@ class GoogleDriveClean(GoogleDriveHelper):
             display_name = cat_name or "Selected"
             await send_message(
                 self.listener.message,
-                f"⌬ <b><i>Drive Cleaned</i></b>\n┟ <b>Category</b> → <code>{display_name}</code>\n┖ <b>Status</b> → <i>Completed</i>",
+                f"{e('trash')} <b>Drive Cleaned</b>\n<blockquote><b>Category</b> → <code>{display_name}</code>\n<b>Status</b> → <i>Completed</i></blockquote>",
             )
         elif self._error_msg:
             await send_message(
                 self.listener.message,
-                f"⌬ <b><i>Drive Clean Error</i></b>\n┖ <b>Error</b> → <code>{self._error_msg}</code>",
+                f"{e('warn')} <b>Drive Clean Error</b>\n<blockquote><b>Error</b> → <code>{self._error_msg}</code></blockquote>",
             )

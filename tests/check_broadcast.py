@@ -24,13 +24,13 @@ async def edit_message(m, text): edits.append(text)
 async def sleep(v): sleeps.append(v)
 ns = {"FloodWait": FloodWait, "UserIsBlocked": UserIsBlocked, "InputUserDeactivated": InputUserDeactivated, "database": DB(),
       "send_message": send_message, "edit_message": edit_message, "sleep": sleep, "time": lambda: 0, "token_hex": lambda n: "bc1",
-      "bc_cache": {}, "get_readable_time": lambda s: "0s", "LOGGER": types.SimpleNamespace(error=lambda *a: None)}
+      "bc_cache": {}, "emoji": lambda name: "📬", "get_readable_time": lambda s: "0s", "LOGGER": types.SimpleNamespace(error=lambda *a: None)}
 exec(compile(ast.Module(body=nodes, type_ignores=[]), "x", "exec"), ns)
 bc = asyncio.run(ns["run_broadcast"](Rply(), "msg"))
 final = edits[-1]
 import re
 stats = dict(re.findall(r"<b>([A-Za-z ]+):</b> <code>(\d+)</code>", final))
-ok = (bc == "bc1" and stats == {"Total Users": "7", "Success": "3", "Blocked Users": "1", "Deleted Accounts": "1", "Unsuccess Attempt": "2"}
+ok = (bc == "bc1" and stats == {"Total Users": "7", "Success": "3", "Blocked Users": "1", "Deleted Accounts": "1", "Failed": "2"}
       and sorted(removed) == [2, 5] and len(sleeps) == 2 and ns["bc_cache"]["bc1"] == [(1, 10), (3, 30), (7, 70)])
 print(stats, "removed", removed, "sleeps", len(sleeps))
 print("ALL PASS" if ok else "SOME FAILED")

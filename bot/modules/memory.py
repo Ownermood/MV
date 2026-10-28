@@ -15,6 +15,7 @@ from ..helper.ext_utils.mem_guard import (
     trim_caches,
 )
 from ..helper.telegram_helper.button_build import ButtonMaker
+from ..helper.telegram_helper.emoji import e
 from ..helper.telegram_helper.message_utils import (
     delete_message,
     edit_message,
@@ -23,10 +24,13 @@ from ..helper.telegram_helper.message_utils import (
 
 
 def _wz(title, rows, note=""):
-    lines = [f"⌬ <b><u>{title}</u></b>", "│"]
-    for index, (key, value) in enumerate(rows):
-        edge = "┟" if index == 0 else ("┖" if index == len(rows) - 1 else "┠")
-        lines.append(f"{edge} <b>{key}</b> → {value}")
+    lines = [f"{e('server')} <b>{title}</b>"]
+    if rows:
+        lines.append(
+            "<blockquote>"
+            + "\n".join(f"<b>{key}</b> → {value}" for key, value in rows)
+            + "</blockquote>"
+        )
     if note:
         lines.append("")
         lines.append(f"<i>{note}</i>")

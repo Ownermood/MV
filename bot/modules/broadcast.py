@@ -10,6 +10,7 @@ from ..core.tg_client import TgClient
 from ..helper.ext_utils.bot_utils import new_task
 from ..helper.ext_utils.db_handler import database
 from ..helper.ext_utils.status_utils import get_readable_time
+from ..helper.telegram_helper.emoji import e as emoji
 from ..helper.telegram_helper.message_utils import (
     edit_message,
     send_message,
@@ -41,12 +42,12 @@ async def delete_broadcast(bc_id, message):
         total += 1
     return await edit_message(
         temp_wait,
-        f"""⌬  <b><i>Broadcast Deleted Stats :</i></b>
-┠ <b>Total Users:</b> <code>{total}</code>
-┠ <b>Success:</b> <code>{success}</code>
-┖ <b>Failed Attempts:</b> <code>{failed}</code>
+        f"""{emoji('mail')} <b>Broadcast Deleted Stats</b>
+<blockquote><b>Total Users:</b> <code>{total}</code>
+<b>Success:</b> <code>{success}</code>
+<b>Failed Attempts:</b> <code>{failed}</code>
 
-<b>Broadcast ID:</b> <code>{bc_id}</code>""",
+<b>Broadcast ID:</b> <code>{bc_id}</code></blockquote>""",
     )
 
 
@@ -87,12 +88,12 @@ async def edit_broadcast(bc_id, message, rply):
         total += 1
     return await edit_message(
         temp_wait,
-        f"""⌬  <b><i>Broadcast Edited Stats :</i></b>
-┠ <b>Total Users:</b> <code>{total}</code>
-┠ <b>Success:</b> <code>{success}</code>
-┖ <b>Failed Attempts:</b> <code>{failed}</code>
+        f"""{emoji('mail')} <b>Broadcast Edited Stats</b>
+<blockquote><b>Total Users:</b> <code>{total}</code>
+<b>Success:</b> <code>{success}</code>
+<b>Failed Attempts:</b> <code>{failed}</code>
 
-<b>Broadcast ID:</b> <code>{bc_id}</code>""",
+<b>Broadcast ID:</b> <code>{bc_id}</code></blockquote>""",
     )
 
 
@@ -153,12 +154,12 @@ async def broadcast(_, message):
     await run_broadcast(rply, message, forwarded, quietly)
 
 
-BC_STATUS = """⌬  <b><i>Broadcast Stats :</i></b>
-┠ <b>Total Users:</b> <code>{t}</code>
-┠ <b>Success:</b> <code>{s}</code>
-┠ <b>Blocked Users:</b> <code>{b}</code>
-┠ <b>Deleted Accounts:</b> <code>{d}</code>
-┖ <b>Unsuccess Attempt:</b> <code>{u}</code>"""
+BC_STATUS = """{icon} <b>Broadcast Stats</b>
+<blockquote><b>Total Users:</b> <code>{t}</code>
+<b>Success:</b> <code>{s}</code>
+<b>Blocked Users:</b> <code>{b}</code>
+<b>Deleted Accounts:</b> <code>{d}</code>
+<b>Failed:</b> <code>{u}</code></blockquote>"""
 
 
 async def _send_one(rply, uid, forwarded, quietly):
@@ -172,7 +173,7 @@ async def run_broadcast(rply, reply_to, forwarded=False, quietly=False):
     start_time = time()
     updater = time()
     bc_hash, bc_msgs = token_hex(5), []
-    pls_wait = await send_message(reply_to, BC_STATUS.format(t=0, s=0, b=0, d=0, u=0))
+    pls_wait = await send_message(reply_to, BC_STATUS.format(icon=emoji('mail'), t=0, s=0, b=0, d=0, u=0))
     t, s, b, d, u = 0, 0, 0, 0, 0
     for uid in await database.get_pm_uids():
         bc_msg = None
@@ -200,11 +201,11 @@ async def run_broadcast(rply, reply_to, forwarded=False, quietly=False):
             bc_msgs.append((uid, bc_msg.id))
         t += 1
         if (time() - updater) > 10:
-            await edit_message(pls_wait, BC_STATUS.format(t=t, s=s, b=b, d=d, u=u))
+            await edit_message(pls_wait, BC_STATUS.format(icon=emoji('mail'), t=t, s=s, b=b, d=d, u=u))
             updater = time()
     bc_cache[bc_hash] = bc_msgs
     await edit_message(
         pls_wait,
-        f"{BC_STATUS.format(t=t, s=s, b=b, d=d, u=u)}\n\n<b>Elapsed Time:</b> <code>{get_readable_time(time() - start_time)}</code>\n<b>Broadcast ID:</b> <code>{bc_hash}</code>",
+        f"{BC_STATUS.format(icon=emoji('mail'), t=t, s=s, b=b, d=d, u=u)}\n\n<b>Elapsed Time:</b> <code>{get_readable_time(time() - start_time)}</code>\n<b>Broadcast ID:</b> <code>{bc_hash}</code>",
     )
     return bc_hash

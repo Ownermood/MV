@@ -344,12 +344,11 @@ async def start(_, message):
                 "Activate Access Token", f"start pass {input_token}", "header"
             )
             reply_markup = buttons.build_menu(2)
-            msg = f"""⌬ Access Login Token : 
-    │
-    ┟ <b>Status</b> → <code>Generated Successfully</code>
-    ┟ <b>Access Token</b> → <code>{input_token}</code>
-    ┃
-    ┖ <b>Validity:</b> {get_readable_time(int(Config.VERIFY_TIMEOUT))}"""
+            msg = f"""{e('key')} <b>Access Login Token</b>
+<blockquote><b>Status</b> → <code>Generated Successfully</code>
+<b>Access Token</b> → <code>{input_token}</code>
+
+<b>Validity:</b> {get_readable_time(int(Config.VERIFY_TIMEOUT))}</blockquote>"""
             return await send_message(message, msg, reply_markup)
 
     if await CustomFilters.authorized(_, message):

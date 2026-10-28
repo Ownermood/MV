@@ -26,6 +26,7 @@ from ..helper.ext_utils.bot_utils import (
 from ..helper.ext_utils.db_handler import database
 from ..helper.listeners.mega_listener import mega_cleanup
 from ..helper.telegram_helper import button_build
+from ..helper.telegram_helper.emoji import e
 from ..helper.telegram_helper.message_utils import (
     delete_message,
     send_message,
@@ -62,12 +63,12 @@ async def restart_sessions(_, message):
 def _restart_header(now, is_restart_chat=False):
     title = "Restarted Successfully!" if is_restart_chat else "Bot Restarted!"
     return (
-        f"⌬ <b><i>{title}</i></b>\n"
-        f"┟ <b>Date:</b> {now.strftime('%d/%m/%y')}\n"
-        f"┠ <b>Time:</b> {now.strftime('%I:%M:%S %p')}\n"
-        f"┠ <b>TimeZone:</b> {Config.TIMEZONE}\n"
-        f"┠ <b>Branch:</b> {Config.UPSTREAM_BRANCH}\n"
-        f"┖ <b>Version:</b> {get_version()}"
+        f"{e('bolt')} <b>{title}</b>\n<blockquote>"
+        f"<b>Date:</b> {now.strftime('%d/%m/%y')}\n"
+        f"<b>Time:</b> {now.strftime('%I:%M:%S %p')}\n"
+        f"<b>TimeZone:</b> {Config.TIMEZONE}\n"
+        f"<b>Branch:</b> {Config.UPSTREAM_BRANCH}\n"
+        f"<b>Version:</b> {get_version()}</blockquote>"
     )
 
 
@@ -122,9 +123,9 @@ async def _notify_tasks(notifier_dict, restart_chat_id, now):
     for cid, data in notifier_dict.items():
         is_restart_chat = cid == restart_chat_id
         header = _restart_header(now, is_restart_chat)
-        msg = header + "\n\n⌬ <b><i>Incomplete Tasks!</i></b>"
+        msg = header + f"\n{e('list')} <b>Incomplete Tasks</b>"
         for tag, tasks in data.items():
-            entry = f"\n➲ <b>User:</b> {tag}\n┖ <b>Tasks:</b>"
+            entry = f"\n<b>User:</b> {tag}\n<b>Tasks:</b>"
             for index, task in enumerate(tasks, start=1):
                 link = task.get("link", "")
                 entry += f" {index}. <a href='{link}'>L</a> |"

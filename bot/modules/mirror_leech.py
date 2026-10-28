@@ -79,6 +79,7 @@ from ..helper.mirror_leech_utils.download_utils.telegram_download import (
     TelegramDownloadHelper,
 )
 from ..helper.telegram_helper.button_build import ButtonMaker
+from ..helper.telegram_helper.emoji import e as emoji
 from ..helper.telegram_helper.bot_commands import BotCommands
 from ..helper.telegram_helper.error_report import report_task_error
 from ..helper.telegram_helper.message_utils import (
@@ -888,13 +889,13 @@ async def seedr_link(client, message):
 
         buttons = ButtonMaker()
         text_lines = [
-            f"<b><i>{escape(title or contents[0]['filename'])}</i></b>\n│",
-            f"┟ <b>Task Size</b> → {get_readable_file_size(total_size)}",
-            f"┠ <b>Time Taken</b> → {get_readable_time(time() - message.date.timestamp())}",
-            "┠ <b>In Mode</b> → Seedr Cloud",
-            f"┠ <b>Total Files</b> → {len(contents)}",
-            f"┖ <b>Task By</b> → {tag}\n",
-            "〶 <b><u>Files List :</u></b>",
+            f"{emoji('done')} <b>{escape(title or contents[0]['filename'])}</b>",
+            f"<blockquote><b>Task Size</b> → {get_readable_file_size(total_size)}",
+            f"<b>Time Taken</b> → {get_readable_time(time() - message.date.timestamp())}",
+            "<b>In Mode</b> → Seedr Cloud",
+            f"<b>Total Files</b> → {len(contents)}",
+            f"<b>Task By</b> → {tag}</blockquote>",
+            f"{emoji('list')} <b>Files List</b>",
         ]
 
         for idx, item in enumerate(contents, start=1):
@@ -925,10 +926,9 @@ async def seedr_link(client, message):
         await _delete_seedr_folder(seedr_client, folder_id)
         await edit_message(
             msg,
-            "<i><b>〶 Seedr Link Stopped!</b></i>"
-            "\n│"
-            f"\n┟ <b>Due To</b> → {escape(str(e))}"
-            f"\n┠ <b>Time Taken</b> → {get_readable_time(time() - message.date.timestamp())}"
-            "\n┠ <b>In Mode</b> → Seedr Cloud"
-            f"\n┖ <b>Task By</b> → {tag}",
+            f"{emoji('warn')} <b>Seedr Link Stopped</b>"
+            f"\n<blockquote><b>Due To</b> → {escape(str(e))}"
+            f"\n<b>Time Taken</b> → {get_readable_time(time() - message.date.timestamp())}"
+            "\n<b>In Mode</b> → Seedr Cloud"
+            f"\n<b>Task By</b> → {tag}</blockquote>",
         )

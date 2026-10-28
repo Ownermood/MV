@@ -144,12 +144,10 @@ class TaskListener(TaskConfig):
         if Config.LINKS_LOG_ID:
             await send_message(
                 Config.LINKS_LOG_ID,
-                f"""➲  <b><u>{mode_name} Started:</u></b>
- ┃
- ┠ <b>User :</b> {self.tag} ( #ID{self.user_id} )
- ┠ <b>Message Link :</b> <a href='{self.message.link}'>Click Here</a>
- ┗ <b>Link:</b> <a href='{self.source_url}'>Click Here</a>
- """,
+                f"{e('play')} <b>{mode_name} Started</b>\n<blockquote>"
+                f"<b>User:</b> {self.tag} (#ID{self.user_id})\n"
+                f"<b>Message:</b> <a href='{self.message.link}'>Open</a>\n"
+                f"<b>Link:</b> <a href='{self.source_url}'>Open</a></blockquote>",
             )
         if (
             self.is_super_chat
