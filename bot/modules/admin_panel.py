@@ -45,11 +45,11 @@ def _cb(uid, action, arg=""):
     return f"adm {uid} {action} {arg}".strip()
 
 
-RED_ICONS = {"close", "remove", "trash"}
+RED_ICONS = {"close", "remove", "trash", "back"}
 
 
 def _btn(buttons, uid, name, text, action, arg="", position=None, on=False):
-    # green: switched on · red: close/remove · blue: everything else
+    # green: switched on · red: close/remove/back · blue: everything else
     style = (
         GREEN if on else ButtonStyle.DANGER if name in RED_ICONS else ButtonStyle.PRIMARY
     )

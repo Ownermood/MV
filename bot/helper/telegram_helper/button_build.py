@@ -51,6 +51,8 @@ class ButtonMaker:
         )
 
     def data_button(self, key, data, position=None, style=None, icon=None):
+        if style is None and str(key).strip().endswith("Back"):
+            style = ButtonStyle.DANGER  # every Back button is red
         self.buttons[position if position in self.buttons else "default"].append(
             InlineKeyboardButton(
                 text=key,

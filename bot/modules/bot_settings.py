@@ -160,7 +160,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
             btn_label("back", "Admin Panel"),
             "botset adminpanel",
             "footer",
-            style=ButtonStyle.PRIMARY,
+            style=ButtonStyle.DANGER,
             icon=icon("back"),
         )
         buttons.data_button(
@@ -548,7 +548,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
 _RED, _GREEN, _BLUE = ButtonStyle.DANGER, ButtonStyle.SUCCESS, ButtonStyle.PRIMARY
 # button text -> (icon, shown text, colour); colour None keeps the page's own
 _PAINT = {
-    "Back": ("back", "Back", _BLUE),
+    "Back": ("back", "Back", _RED),
     "Close": ("close", "Close", _RED),
     "Add New": ("add", "Add New", None),
     "Add new key": ("add", "Add New Key", None),
@@ -581,7 +581,7 @@ _PAINT = {
 
 
 def _paint(buttons):
-    """Same look on every page: icons, Back blue, Close red, the rest blue."""
+    """Same look on every page: icons, Back and Close red, the rest blue."""
     for row in buttons.buttons.values():
         for b in row:
             if (look := _PAINT.get(b.text.strip())) and b.icon_custom_emoji_id is None:
@@ -1224,7 +1224,7 @@ def _nav_footer(buttons):
         btn_label("back", "Back"),
         "botset back",
         "footer",
-        style=ButtonStyle.PRIMARY,
+        style=ButtonStyle.DANGER,
         icon=icon("back"),
     )
     buttons.data_button(
