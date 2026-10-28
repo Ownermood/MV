@@ -9,7 +9,7 @@ from pyrogram.types import (
     LinkPreviewOptions,
     ReplyParameters,
 )
-from pyrogram.enums import ButtonStyle, ChatType, ParseMode
+from pyrogram.enums import ButtonStyle, ParseMode
 from pyrogram.errors import (
     FloodWait,
     MessageNotModified,
@@ -37,7 +37,6 @@ from ... import (
     categories_dict,
     intervals,
     status_dict,
-    task_dict,
     task_dict_lock,
     user_data,
 )
@@ -566,38 +565,11 @@ async def _edit_status(message, text, buttons, is_rich):
     return await edit_message(message, text, buttons, block=False, photo="IMAGES")
 
 
-async def _reply_alive(message):
-    """Telegram bug (tdlib/telegram-bot-api#904): editing a rich message in a
-    supergroup drops its premium emoji unless the message is a reply. So the
-    rich status must stay a reply to a message that still exists."""
-    rid = getattr(message, "reply_to_message_id", None)
-    if not rid:
-        return False
-    try:
-        target = await TgClient.bot.get_messages(message.chat.id, rid)
-    except Exception:
-        return True  # unknown: don't re-send for nothing
-    return bool(target) and not getattr(target, "empty", False)
-
-
-def _live_task_message(chat_id):
-    for task in reversed(list(task_dict.values())):
-        msg = getattr(getattr(task, "listener", None), "message", None)
-        if msg is not None and msg.chat.id == chat_id:
-            return msg
-    return None
-
-
 async def update_status_message(sid, force=False):
     if intervals["stopAll"]:
         return
-    resend_to = None
     async with task_dict_lock:
-        resend_to = await _update_status_locked(sid, force)
-    if resend_to is not None:
-        # the card lost its reply target: send it again as a fresh reply
-        LOGGER.info(f"Status {sid}: reply target gone, re-sending to keep premium emoji")
-        await send_status_message(resend_to)
+        await _update_status_locked(sid, force)
 
 
 async def _update_status_locked(sid, force):
@@ -623,19 +595,6 @@ async def _update_status_locked(sid, force):
             del intervals["status"][sid]
         return
     if text != status_dict[sid]["message"].text:
-        current = status_dict[sid]["message"]
-        if (
-            status_dict[sid].get("rich")
-            and _use_rich(text)
-            and not is_user
-            and current.chat.type in (ChatType.SUPERGROUP, ChatType.GROUP)
-            and time() - status_dict[sid].get("anchor_checked", 0) > 30
-        ):
-            status_dict[sid]["anchor_checked"] = time()
-            if not await _reply_alive(current) and (
-                target := _live_task_message(sid)
-            ):
-                return target
         message = await _edit_status(
             status_dict[sid]["message"],
             text,
