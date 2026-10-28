@@ -205,6 +205,7 @@ separate commit on this branch. Findings found during the merge (not in the sect
 | *new* `/stats` ran upstream `version.py` | Version parsed as text, never executed |
 | *new* AllDebrid key in chat errors | Masked |
 | *new* telemetry uploads recent logs | `ENABLE_TELEMETRY` defaults to False |
+| *new* AllDebrid/TorBox wait could not be cancelled | Resolution is listed in `/status` and stoppable with `/cancel` |
 | #6 unpinned dependencies | **Still open** — see below |
 
 Ported features carry their own fixes: gallery-dl (`literal_eval`, option scrubbing, serialized jobs),
@@ -212,8 +213,9 @@ TorBox (key masked in errors), tl;dv (TLS verification on, token only sent to tl
 
 **Still open, with reasons:**
 - Dependencies are unpinned and `update.py` upgrades them on boot. Pinning needs the versions in the
-  `mysterysd/wzmlx:wzadv` base image, which could not be inspected here; pinning blindly can break the build.
+  `mysterysd/wzmlx:wzadv` base image; no Docker daemon was available here and Docker Hub rate-limited the
+  registry API, so they could not be read. Pinning blindly can break the build. To get them:
+  `docker run --rm --entrypoint /wzvenv/bin/python mysterysd/wzmlx:wzadv -m pip freeze` and pin
+  `requirements.txt` to that output.
 - The Docker base image is a third-party prebuilt image (`mysterysd/wzmlx:wzadv`).
-- AllDebrid/TorBox magnets are resolved before the task is registered, so `/cancel` cannot stop that wait
-  (inherited from WZML-X's AllDebrid flow).
 - Nothing here was run against live Telegram; checks use stubs (`python3 tests/run_checks.py`).

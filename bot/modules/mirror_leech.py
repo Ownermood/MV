@@ -4,13 +4,14 @@ from base64 import b64encode
 from html import escape
 from os import path as ospath
 from re import match as re_match
+from secrets import token_hex
 from time import time
 
 from aiofiles import open as aiopen
 from aiofiles.os import path as aiopath
 from bot.core.config_manager import Config
 
-from .. import DOWNLOAD_DIR, LOGGER, bot_loop, task_dict_lock, user_data
+from .. import DOWNLOAD_DIR, LOGGER, bot_loop, task_dict, task_dict_lock, user_data
 from ..core.seedr_client import SeedrClient
 from ..helper.ext_utils.bot_utils import (
     COMMAND_USAGE,
@@ -42,6 +43,7 @@ from ..helper.mirror_leech_utils.download_utils.alldebrid_resolver import (
     alldebrid_resolve_magnet,
     alldebrid_resolve_torrent,
 )
+from ..helper.mirror_leech_utils.status_utils.queue_status import ResolveStatus
 from ..helper.mirror_leech_utils.download_utils.tldv_downloader import (
     add_tldv_download,
 )
@@ -121,6 +123,16 @@ class Mirror(TaskListener):
         self.is_nzb = is_nzb
         self.is_seedr = is_seedr
         self.is_uphoster = is_uphoster
+
+    async def _track_resolve(self, engine):
+        # debrid polling can take long; list it in /status so /cancel works
+        async with task_dict_lock:
+            task_dict[self.mid] = ResolveStatus(self, token_hex(5), engine)
+
+    async def _untrack_resolve(self):
+        async with task_dict_lock:
+            if isinstance(task_dict.get(self.mid), ResolveStatus):
+                del task_dict[self.mid]
 
     async def new_event(self):
         if self.is_leech:
@@ -447,6 +459,7 @@ class Mirror(TaskListener):
         if self.is_alldebrid and (
             is_magnet(self.link) or self.link.endswith(".torrent")
         ):
+            await self._track_resolve("AllDebrid")
             try:
                 if is_magnet(self.link):
                     LOGGER.info("AllDebrid magnet route")
@@ -464,6 +477,8 @@ class Mirror(TaskListener):
                         is_cancelled=lambda: self.is_cancelled,
                     )
             except DirectDownloadLinkException as e:
+                if self.is_cancelled:
+                    return
                 e = str(e)
                 LOGGER.info(e)
                 if e.startswith("ERROR:"):
@@ -473,10 +488,14 @@ class Mirror(TaskListener):
                     return
                 resolved = None
             except Exception as e:
+                if self.is_cancelled:
+                    return
                 await send_message(self.message, e)
                 await self.remove_from_same_dir()
                 await delete_links(self.message)
                 return
+            finally:
+                await self._untrack_resolve()
             if isinstance(resolved, dict):
                 self._alldebrid_magnet_id = resolved.get("magnet_id", 0)
                 self.link = resolved
@@ -484,6 +503,7 @@ class Mirror(TaskListener):
                 self.is_qbit = False
 
         if self.is_torbox and (is_magnet(self.link) or self.link.endswith(".torrent")):
+            await self._track_resolve("TorBox")
             try:
                 if is_magnet(self.link):
                     LOGGER.info("TorBox magnet route")
@@ -500,10 +520,14 @@ class Mirror(TaskListener):
                         is_cancelled=lambda: self.is_cancelled,
                     )
             except Exception as e:
+                if self.is_cancelled:
+                    return
                 await send_message(self.message, e)
                 await self.remove_from_same_dir()
                 await delete_links(self.message)
                 return
+            finally:
+                await self._untrack_resolve()
             self._torbox_torrent_id = resolved.get("torbox_torrent_id", 0)
             self.link = resolved
             self.is_jd = False
@@ -543,15 +567,20 @@ class Mirror(TaskListener):
                     await delete_links(self.message)
                     return
             elif self.is_torbox:
+                await self._track_resolve("TorBox")
                 try:
                     resolved = await torbox_resolve(
                         self.link, is_cancelled=lambda: self.is_cancelled
                     )
                 except Exception as e:
+                    if self.is_cancelled:
+                        return
                     await send_message(self.message, e)
                     await self.remove_from_same_dir()
                     await delete_links(self.message)
                     return
+                finally:
+                    await self._untrack_resolve()
                 self._torbox_web_id = resolved.get("torbox_web_id", 0)
                 self.link = resolved
 

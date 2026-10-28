@@ -50,3 +50,19 @@ class QueueStatus:
             await self.listener.on_upload_error(
                 "task have been removed from queue/upload"
             )
+
+
+class ResolveStatus(QueueStatus):
+    # Debrid link/magnet resolution before a download engine takes over:
+    # listed in /status and stoppable with /cancel
+    def __init__(self, listener, gid, engine):
+        super().__init__(listener, gid, "dl")
+        self.engine = engine
+
+    def status(self):
+        return MirrorStatus.STATUS_DOWNLOAD
+
+    async def cancel_task(self):
+        self.listener.is_cancelled = True
+        LOGGER.info(f"Cancelling {self.engine} resolve: {self.listener.name}")
+        await self.listener.on_download_error("Stopped by User!")

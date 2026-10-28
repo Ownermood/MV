@@ -36,6 +36,7 @@ CHECKS = [
     ("TorBox resolver", "check_torbox.py", [REPO], None),
     ("tl;dv downloader", "check_tldv.py", [REPO, "WORK"], tldv_setup),
     ("rclone file manager", "check_rcfm.py", [REPO, "WORK"], None),
+    ("debrid resolve /cancel", "check_resolve_cancel.py", [REPO], None),
 ]
 
 failed = []
