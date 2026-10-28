@@ -5,6 +5,7 @@ from mimetypes import guess_type
 from contextlib import suppress
 from os import path as ospath
 from pyrogram.enums import ButtonStyle
+from pyrogram.types import ReplyParameters
 
 from aiofiles.os import listdir, remove, path as aiopath
 from niquests import utils as rutils
@@ -45,6 +46,7 @@ from ..ext_utils.status_utils import (
     get_readable_time,
     upload_text,
 )
+from ..ext_utils.status_rich import build_dm_notice
 from ..ext_utils.task_manager import check_running_tasks, start_from_queued
 from ..mirror_leech_utils.uphoster_utils.multi_upload import MultiUphosterUpload
 from ..mirror_leech_utils.gdrive_utils.upload import GoogleDriveUpload
@@ -78,15 +80,22 @@ class TaskListener(TaskConfig):
         super().__init__()
 
     async def _tell_group_sent(self, what):
-        """One short line in the group, tagging the user, with a DM button."""
+        """One short line in the group, tagging the user, with a DM button.
+        Rich message (button inside the text) first, normal message if not."""
+        url = f"https://t.me/{TgClient.BNAME}"
+        user = self.message.from_user
+        if user and user.first_name:
+            with suppress(Exception):
+                return await TgClient.bot.send_message(
+                    chat_id=self.message.chat.id,
+                    text=f"{user.first_name} {what}",
+                    rich_text=build_dm_notice(user.first_name, user.id, what, url),
+                    reply_parameters=ReplyParameters(message_id=self.message.id),
+                )
         buttons = ButtonMaker()
         buttons.url_button(
-            label("mail", "Open DM"),
-            f"https://t.me/{TgClient.BNAME}",
-            style=ButtonStyle.SUCCESS,
-            icon=icon("mail"),
+            label("mail", "Open DM"), url, style=ButtonStyle.SUCCESS, icon=icon("mail")
         )
-        user = self.message.from_user
         # first name as a clickable mention; @username/ID only as a fallback
         who = (
             f"<a href='tg://user?id={user.id}'>{escape(user.first_name)}</a>"

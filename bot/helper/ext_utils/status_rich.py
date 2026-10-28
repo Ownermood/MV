@@ -97,3 +97,21 @@ def build_rich_status(header, tasks, stats, nav):
         buttons.append(_button(icon_name, text, data, "primary"))
     blocks.append(InputRichBlockParagraph(_concat(*buttons)))
     return InputRichMessage(blocks=blocks)
+
+
+def build_dm_notice(name, user_id, text, url):
+    """Group line after a DM delivery: the user's name, the text, and a green
+    "Open DM" button inside the message (like Cancel on the status card)."""
+    line = _concat(
+        raw.types.TextUrl(text=_plain(name), url=f"tg://user?id={user_id}", webpage_id=0),
+        _plain(" 📩 "),
+        _bold(text),
+    )
+    button = raw.types.TextButton(
+        text=_concat(_plain("Open DM")),
+        type=raw.types.InlineButtonTypeUrl(url=url),
+        style=raw.types.RichButtonStyle(bg_success=True),
+    )
+    return InputRichMessage(
+        blocks=[InputRichBlockParagraph(line), InputRichBlockParagraph(button)]
+    )
