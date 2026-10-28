@@ -842,12 +842,16 @@ class FFMpeg:
             return False
 
     async def split(self, f_path, file_, parts, split_size):
+        # Videos are cut into `parts` pieces of equal length, so a file that fits in
+        # 2 parts gives exactly 2. -fs keeps every part under the upload size; if a
+        # high bitrate part hits it, the rest simply goes into one more part.
         cores, threads = ffmpeg_layout()
         self.clear()
         multi_streams = True
         self._total_time = duration = (await get_media_info(f_path))[0]
         base_name, extension = ospath.splitext(file_)
-        split_size -= 3000000
+        size_cap = max(split_size, self._listener.split_size) - 3000000
+        part_time = duration / parts if duration and parts > 1 else 0
         start_time = 0
         i = 1
         while i <= parts or start_time < duration - 4:
@@ -867,9 +871,13 @@ class FFMpeg:
                 "-i",
                 f_path,
                 "-fs",
-                str(split_size),
-                "-map",
-                "0",
+                str(size_cap),
+            ]
+            if part_time and i < parts:
+                cmd += ["-t", str(part_time)]
+            if multi_streams:
+                cmd += ["-map", "0"]
+            cmd += [
                 "-map_chapters",
                 "-1",
                 "-async",
@@ -882,9 +890,6 @@ class FFMpeg:
                 f"{threads}",
                 out_path,
             ]
-            if not multi_streams:
-                del cmd[15]
-                del cmd[15]
             if self._listener.is_cancelled:
                 return False
             self._listener.subproc = await create_subprocess_exec(
@@ -918,7 +923,7 @@ class FFMpeg:
                 return False
             out_size = await aiopath.getsize(out_path)
             if out_size > self._listener.max_split_size:
-                split_size -= (out_size - self._listener.max_split_size) + 5000000
+                size_cap -= (out_size - self._listener.max_split_size) + 5000000
                 LOGGER.warning(
                     f"Part size is {out_size}. Trying again with lower split size!. Path: {f_path}"
                 )
@@ -940,6 +945,8 @@ class FFMpeg:
                 break
             self._last_processed_time += lpd
             self._last_processed_bytes += out_size
-            start_time += lpd - 3
+            # -ss before -i starts the next part at the keyframe before this point,
+            # so parts overlap by a moment instead of losing frames
+            start_time += lpd - 1
             i += 1
         return True

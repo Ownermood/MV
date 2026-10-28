@@ -2,7 +2,7 @@
 
 They load single functions or modules from the bot with stubs, so no
 Telegram config is needed. Extra packages: pip install -r tests/requirements.txt
-check_tldv also needs ffmpeg/ffprobe on PATH.
+check_tldv and check_split also need ffmpeg/ffprobe on PATH.
 """
 
 import subprocess
@@ -43,6 +43,7 @@ CHECKS = [
     ("force join", "check_force_join.py", [REPO], None),
     ("force join auto-verify", "check_auto_verify.py", [REPO], None),
     ("status card", "check_status_card.py", [REPO], None),
+    ("video split into parts", "check_split.py", [REPO, "WORK"], None),
 ]
 
 failed = []
