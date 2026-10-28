@@ -6,7 +6,7 @@ from json import loads
 
 from aiofiles.os import path as aiopath
 
-from ..core.config_manager import BinConfig, Config
+from ..core.config_manager import BinConfig
 from ..helper.ext_utils.bot_utils import cmd_exec, new_task, safe_path_name
 from ..helper.ext_utils.status_utils import get_readable_file_size
 from ..helper.telegram_helper.button_build import ButtonMaker
