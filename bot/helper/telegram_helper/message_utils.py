@@ -9,7 +9,7 @@ from pyrogram.types import (
     LinkPreviewOptions,
     ReplyParameters,
 )
-from pyrogram.enums import ButtonStyle, ParseMode
+from pyrogram.enums import ButtonStyle, ChatType, ParseMode
 from pyrogram.errors import (
     FloodWait,
     MessageNotModified,
@@ -37,6 +37,7 @@ from ... import (
     categories_dict,
     intervals,
     status_dict,
+    task_dict,
     task_dict_lock,
     user_data,
 )
@@ -565,51 +566,95 @@ async def _edit_status(message, text, buttons, is_rich):
     return await edit_message(message, text, buttons, block=False, photo="IMAGES")
 
 
+async def _reply_alive(message):
+    """Telegram bug (tdlib/telegram-bot-api#904): editing a rich message in a
+    supergroup drops its premium emoji unless the message is a reply. So the
+    rich status must stay a reply to a message that still exists."""
+    rid = getattr(message, "reply_to_message_id", None)
+    if not rid:
+        return False
+    try:
+        target = await TgClient.bot.get_messages(message.chat.id, rid)
+    except Exception:
+        return True  # unknown: don't re-send for nothing
+    return bool(target) and not getattr(target, "empty", False)
+
+
+def _live_task_message(chat_id):
+    for task in reversed(list(task_dict.values())):
+        msg = getattr(getattr(task, "listener", None), "message", None)
+        if msg is not None and msg.chat.id == chat_id:
+            return msg
+    return None
+
+
 async def update_status_message(sid, force=False):
     if intervals["stopAll"]:
         return
+    resend_to = None
     async with task_dict_lock:
-        if not status_dict.get(sid):
-            if obj := intervals["status"].get(sid):
-                obj.cancel()
-                del intervals["status"][sid]
-            return
-        if not force and time() - status_dict[sid]["time"] < 3:
-            return
-        status_dict[sid]["time"] = time()
-        page_no = status_dict[sid]["page_no"]
-        status = status_dict[sid]["status"]
-        is_user = status_dict[sid]["is_user"]
-        page_step = status_dict[sid]["page_step"]
-        text, buttons = await get_readable_message(
-            sid, is_user, page_no, status, page_step
+        resend_to = await _update_status_locked(sid, force)
+    if resend_to is not None:
+        # the card lost its reply target: send it again as a fresh reply
+        LOGGER.info(f"Status {sid}: reply target gone, re-sending to keep premium emoji")
+        await send_status_message(resend_to)
+
+
+async def _update_status_locked(sid, force):
+    if not status_dict.get(sid):
+        if obj := intervals["status"].get(sid):
+            obj.cancel()
+            del intervals["status"][sid]
+        return
+    if not force and time() - status_dict[sid]["time"] < 3:
+        return
+    status_dict[sid]["time"] = time()
+    page_no = status_dict[sid]["page_no"]
+    status = status_dict[sid]["status"]
+    is_user = status_dict[sid]["is_user"]
+    page_step = status_dict[sid]["page_step"]
+    text, buttons = await get_readable_message(
+        sid, is_user, page_no, status, page_step
+    )
+    if text is None:
+        del status_dict[sid]
+        if obj := intervals["status"].get(sid):
+            obj.cancel()
+            del intervals["status"][sid]
+        return
+    if text != status_dict[sid]["message"].text:
+        current = status_dict[sid]["message"]
+        if (
+            status_dict[sid].get("rich")
+            and _use_rich(text)
+            and not is_user
+            and current.chat.type in (ChatType.SUPERGROUP, ChatType.GROUP)
+            and time() - status_dict[sid].get("anchor_checked", 0) > 30
+        ):
+            status_dict[sid]["anchor_checked"] = time()
+            if not await _reply_alive(current) and (
+                target := _live_task_message(sid)
+            ):
+                return target
+        message = await _edit_status(
+            status_dict[sid]["message"],
+            text,
+            buttons,
+            status_dict[sid].get("rich", False),
         )
-        if text is None:
-            del status_dict[sid]
-            if obj := intervals["status"].get(sid):
-                obj.cancel()
-                del intervals["status"][sid]
+        if isinstance(message, str):
+            if message.startswith("Telegram says: [40"):
+                del status_dict[sid]
+                if obj := intervals["status"].get(sid):
+                    obj.cancel()
+                    del intervals["status"][sid]
+            else:
+                LOGGER.error(
+                    f"Status with id: {sid} haven't been updated. Error: {message}"
+                )
             return
-        if text != status_dict[sid]["message"].text:
-            message = await _edit_status(
-                status_dict[sid]["message"],
-                text,
-                buttons,
-                status_dict[sid].get("rich", False),
-            )
-            if isinstance(message, str):
-                if message.startswith("Telegram says: [40"):
-                    del status_dict[sid]
-                    if obj := intervals["status"].get(sid):
-                        obj.cancel()
-                        del intervals["status"][sid]
-                else:
-                    LOGGER.error(
-                        f"Status with id: {sid} haven't been updated. Error: {message}"
-                    )
-                return
-            status_dict[sid]["message"].text = text
-            status_dict[sid]["time"] = time()
+        status_dict[sid]["message"].text = text
+        status_dict[sid]["time"] = time()
 
 
 async def send_status_message(msg, user_id=0):
