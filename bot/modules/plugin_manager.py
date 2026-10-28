@@ -927,11 +927,11 @@ def register_plugin_commands():
         MessageHandler(
             plugins_command,
             filters=command(BotCommands.PluginsCommand, case_sensitive=True)
-            & CustomFilters.sudo,
+            & CustomFilters.owner,
         )
     )
     TgClient.bot.add_handler(
         CallbackQueryHandler(
-            edit_plugins_menu, filters=regex("^plugins") & CustomFilters.sudo
+            edit_plugins_menu, filters=regex("^plugins") & CustomFilters.owner
         )
     )

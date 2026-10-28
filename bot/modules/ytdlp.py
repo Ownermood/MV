@@ -33,6 +33,52 @@ from ..helper.telegram_helper.message_utils import (
     send_message,
 )
 
+# yt-dlp options that can run commands, load code, or read/write arbitrary host files
+UNSAFE_YTDLP_OPTS = {
+    "exec_cmd",
+    "external_downloader",
+    "external_downloader_args",
+    "ffmpeg_location",
+    "postprocessor_args",
+    "paths",
+    "outtmpl",
+    "cookiefile",
+    "cookiesfrombrowser",
+    "download_archive",
+    "load_info_filename",
+    "enable_file_urls",
+    "netrc_location",
+    "netrc_cmd",
+    "usenetrc",
+    "client_certificate",
+    "client_certificate_key",
+    "cachedir",
+    "config_locations",
+    "plugin_dirs",
+}
+UNSAFE_YTDLP_PPS = {"exec", "execafterdownload"}
+
+
+def sanitize_ytdlp_options(opts):
+    if not isinstance(opts, dict):
+        return {}
+    clean = {}
+    for key, value in opts.items():
+        if key in UNSAFE_YTDLP_OPTS:
+            LOGGER.warning(f"Dropped unsafe yt-dlp option: {key}")
+            continue
+        if key == "postprocessors":
+            pps = value if isinstance(value, list) else [value]
+            value = [
+                pp
+                for pp in pps
+                if isinstance(pp, dict)
+                and str(pp.get("key", "")).lower() not in UNSAFE_YTDLP_PPS
+                and "exec_cmd" not in pp
+            ]
+        clean[key] = value
+    return clean
+
 
 @new_task
 async def select_format(_, query, obj):
@@ -450,7 +496,11 @@ class YtDlp(TaskListener):
 
         await self.get_tag(text)
 
-        opt = opt or self.user_dict.get("YT_DLP_OPTIONS") or Config.YT_DLP_OPTIONS
+        if opt := opt or self.user_dict.get("YT_DLP_OPTIONS"):
+            if self.user_id != Config.OWNER_ID:
+                opt = sanitize_ytdlp_options(opt)
+        else:
+            opt = Config.YT_DLP_OPTIONS
 
         if not self.link and (reply_to := self.message.reply_to_message):
             if reply_to.text:

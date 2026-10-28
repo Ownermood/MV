@@ -8,6 +8,7 @@ from os import getcwd
 from re import sub
 from time import time
 
+from aiofiles import open as aiopen
 from aiofiles.os import makedirs, remove
 from aiofiles.os import path as aiopath
 from langcodes import Language
@@ -46,6 +47,7 @@ from ..helper.telegram_helper.message_utils import (
     send_file,
     send_message,
 )
+from ..helper.mirror_leech_utils.rclone_utils.transfer import unsafe_rclone_config
 
 handler_dict = {}
 
@@ -1409,6 +1411,17 @@ async def add_file(_, message, ftype, rfunc):
         await makedirs(rpath, exist_ok=True)
         des_dir = f"{rpath}{user_id}.conf"
         await message.download(file_name=des_dir)
+        if user_id != Config.OWNER_ID:
+            async with aiopen(des_dir, "r", errors="replace") as f:
+                reason = unsafe_rclone_config(await f.read())
+            if reason:
+                await remove(des_dir)
+                await delete_message(message)
+                await send_message(
+                    message, f"Rclone config refused: {escape(reason)}"
+                )
+                await rfunc()
+                return
     elif ftype == "TOKEN_PICKLE":
         tpath = f"{getcwd()}/tokens/"
         await makedirs(tpath, exist_ok=True)
@@ -1572,7 +1585,7 @@ async def set_option(_, message, option, rfunc):
         value = [x.lstrip(".").strip().lower() for x in value.split() if x.strip()]
     elif option == "CLONE_DUMP_CHATS":
         try:
-            value = eval(value)
+            value = literal_eval(value)
             if not isinstance(value, dict):
                 raise TypeError
         except Exception:
@@ -1582,7 +1595,7 @@ async def set_option(_, message, option, rfunc):
             return
     elif option == "CLONE_FILTERS":
         try:
-            value = eval(value)
+            value = literal_eval(value)
             if not isinstance(value, dict):
                 raise TypeError
         except Exception:

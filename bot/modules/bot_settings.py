@@ -301,7 +301,7 @@ DEFAULT_DESP = {
     "YT_TAGS": "Tags for YouTube uploads. List format.",
     "YT_CATEGORY_ID": "YouTube video category ID. Default: 22 (People & Blogs).",
     "PLUGIN_INDEXES": "Extra plugin index URLs on top of the official one. Each must be a JSON file holding a plugins list.",
-    "ENABLE_TELEMETRY": "Send crash reports to telemetry.wzmlx.com to help fix bugs. Default: True.",
+    "ENABLE_TELEMETRY": "Send crash reports (traceback + recent logs via public telegra.ph page) to telemetry.wzmlx.com. Default: False.",
     "YT_PRIVACY_STATUS": "YouTube upload privacy: public, unlisted, or private.",
 }
 
@@ -311,6 +311,39 @@ PROTECTED_VARS = {
     "OWNER_ID",
     "BOT_TOKEN",
     "DATABASE_URL",
+}
+# Secrets and privilege/code-exec vectors: sudo users may not view, edit or reset these
+OWNER_ONLY_VARS = PROTECTED_VARS | {
+    "HELPER_TOKENS",
+    "STREAM_TOKENS",
+    "USER_SESSION_STRING",
+    "UPSTREAM_REPO",
+    "UPSTREAM_BRANCH",
+    "PLUGIN_INDEXES",
+    "DISABLE_PLUGINS",
+    "ENABLE_TELEMETRY",
+    "ALLDEBRID_API_KEY",
+    "DEBRID_LINK_API",
+    "FILELION_API",
+    "GOFILE_API",
+    "PIXELDRAIN_KEY",
+    "PROTECTED_API",
+    "BUZZHEAVIER_API",
+    "DEVUPLOADS_KEY",
+    "VIKINGFILE_HASH",
+    "INSTADL_API",
+    "JD_EMAIL",
+    "JD_PASS",
+    "MEGA_EMAIL",
+    "MEGA_PASSWORD",
+    "SEEDR_EMAIL",
+    "SEEDR_PASSWORD",
+    "HYDRA_API_KEY",
+    "RCLONE_SERVE_PASS",
+    "STREAMWISH_API",
+    "TMDB_ACCESS_TOKEN",
+    "LOGIN_PASS",
+    "WEB_ACCESS_PASSWORD",
 }
 RESTART_VARS = {
     "STREAM_TOKENS",
@@ -1362,6 +1395,17 @@ async def event_handler(client, query, pfunc, rfunc, document=False):
 async def edit_bot_settings(client, query):
     data = query.data.split()
     message = query.message
+    if query.from_user.id != Config.OWNER_ID and (
+        (
+            data[1] in ("editvar", "showvar", "resetvar", "boolvar")
+            and len(data) > 2
+            and data[2] in OWNER_ONLY_VARS
+        )
+        or (data[1] == "private" and len(data) > 2 and data[2] in ("edit", "new"))
+        or data[1] == "push"
+    ):
+        await query.answer("Only the bot owner can access this!", show_alert=True)
+        return
     handler_dict[message.chat.id] = False
     if data[1] == "close":
         await query.answer()

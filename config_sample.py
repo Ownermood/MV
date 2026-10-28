@@ -127,7 +127,7 @@ VERIFY_TIMEOUT = 0
 LOGIN_PASS = ""
 
 # Crash Reporting
-ENABLE_TELEMETRY = True  # Send crash reports to remote worker
+ENABLE_TELEMETRY = False  # Opt-in: sends crash tracebacks + recent logs to telemetry.wzmlx.com (logs go to a public telegra.ph page)
 
 # Bot Settings
 BOT_PM = False

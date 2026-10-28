@@ -456,6 +456,22 @@ async def get_multiple_frames_thumbnail(video_file, layout, keep_screenshots):
     return output
 
 
+# Absolute/home paths (also inside filter args like textfile=/x), traversal, and
+# protocols that reach outside the task folder or the network
+_FF_ABS_PATH = re.compile(r"(^|[=:,'\"\[\];|\s])\s*[/~\\]")
+_FF_PROTOCOL = re.compile(
+    r"://|(^|[=:,'\"\[\];|\s])(pipe|fd|unix|subfile|tee|concatf?|cache|async|crypto|file)[:,]",
+    re.IGNORECASE,
+)
+
+
+def unsafe_ffmpeg_token(tokens):
+    for token in tokens:
+        if ".." in token or _FF_ABS_PATH.search(token) or _FF_PROTOCOL.search(token):
+            return token
+    return None
+
+
 class FFMpeg:
     def __init__(self, listener):
         self._listener = listener
@@ -581,7 +597,7 @@ class FFMpeg:
         if self._listener.is_cancelled:
             return False
         self._listener.subproc = await create_subprocess_exec(
-            *ffmpeg, stdout=PIPE, stderr=PIPE
+            *ffmpeg, stdout=PIPE, stderr=PIPE, cwd=dir
         )
         await self._ffmpeg_progress()
         _, stderr = await self._listener.subproc.communicate()

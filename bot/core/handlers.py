@@ -31,14 +31,14 @@ async def add_handlers():
         MessageHandler(
             add_sudo,
             filters=command(BotCommands.AddSudoCommand, case_sensitive=True)
-            & CustomFilters.sudo,
+            & CustomFilters.owner,
         )
     )
     TgClient.bot.add_handler(
         MessageHandler(
             remove_sudo,
             filters=command(BotCommands.RmSudoCommand, case_sensitive=True)
-            & CustomFilters.sudo,
+            & CustomFilters.owner,
         )
     )
     TgClient.bot.add_handler(
@@ -123,21 +123,21 @@ async def add_handlers():
         MessageHandler(
             aioexecute,
             filters=command(BotCommands.AExecCommand, case_sensitive=True)
-            & CustomFilters.sudo,
+            & CustomFilters.owner,
         )
     )
     TgClient.bot.add_handler(
         MessageHandler(
             execute,
             filters=command(BotCommands.ExecCommand, case_sensitive=True)
-            & CustomFilters.sudo,
+            & CustomFilters.owner,
         )
     )
     TgClient.bot.add_handler(
         MessageHandler(
             clear,
             filters=command(BotCommands.ClearLocalsCommand, case_sensitive=True)
-            & CustomFilters.sudo,
+            & CustomFilters.owner,
         )
     )
     TgClient.bot.add_handler(
@@ -264,7 +264,7 @@ async def add_handlers():
         MessageHandler(
             run_shell,
             filters=command(BotCommands.ShellCommand, case_sensitive=True)
-            & CustomFilters.sudo,
+            & CustomFilters.owner,
         )
     )
     TgClient.bot.add_handler(

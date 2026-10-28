@@ -4,7 +4,7 @@ from configparser import RawConfigParser
 from json import loads
 from logging import getLogger
 from random import randrange
-from re import findall as re_findall
+from re import IGNORECASE, compile as re_compile, findall as re_findall
 
 from aiofiles import open as aiopen
 from aiofiles.os import listdir, makedirs, path as aiopath
@@ -18,6 +18,47 @@ from ...ext_utils.files_utils import (
 )
 
 LOGGER = getLogger(__name__)
+
+# rclone flags that run programs, switch config, open servers, or read/write host files
+_UNSAFE_RC_FLAG = re_compile(
+    r"command|mapper|ssh|^--config$|^--rc|^--bind|cert|key|profile|dump|log-file|"
+    r"-from|cache-dir|temp-dir|file|links|^-[lL]$",
+    IGNORECASE,
+)
+
+
+def unsafe_rclone_flag(key, value=""):
+    value = value.strip()
+    return bool(
+        _UNSAFE_RC_FLAG.search(key.strip())
+        or ".." in value
+        or value.startswith(("/", "~", "\\"))
+    )
+
+
+def unsafe_rclone_config(text):
+    # Returns why a user-supplied rclone.conf is refused, or None if it is safe
+    config = RawConfigParser()
+    try:
+        config.read_string(text)
+    except Exception as e:
+        return f"invalid config: {e}"
+    for section in config.sections():
+        options = dict(config.items(section))
+        if options.get("type", "").strip().lower() in ("local", "alias"):
+            return f"[{section}] type {options['type']} exposes the bot's disk"
+        for opt, value in options.items():
+            value = value.strip()
+            if "command" in opt or "ssh" in opt:
+                return f"[{section}] {opt} runs a program"
+            if value.startswith(("/", "~", "\\")) or ".." in value:
+                return f"[{section}] {opt} points at a local path"
+            if opt in ("remote", "upstreams"):
+                for target in value.split():
+                    name = target.split(":", 1)[0]
+                    if ":" not in target or not name or "," in name:
+                        return f"[{section}] {opt} = {target} is not a plain remote:path"
+    return None
 
 
 class RcloneTransferHelper:
@@ -493,11 +534,18 @@ class RcloneTransferHelper:
             cmd.extend(("--exclude", ext))
         if rcflags := self._listener.rc_flags:
             rcflags = rcflags.split("|")
+            is_owner = self._listener.user_id == Config.OWNER_ID
             for flag in rcflags:
                 if ":" in flag:
                     key, value = map(str.strip, flag.split(":", 1))
+                    if not is_owner and unsafe_rclone_flag(key, value):
+                        LOGGER.warning(f"Dropped unsafe rclone flag: {key}")
+                        continue
                     cmd.extend((key, value))
                 elif len(flag) > 0:
+                    if not is_owner and unsafe_rclone_flag(flag):
+                        LOGGER.warning(f"Dropped unsafe rclone flag: {flag.strip()}")
+                        continue
                     cmd.append(flag.strip())
         return cmd
 

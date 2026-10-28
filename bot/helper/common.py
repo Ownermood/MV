@@ -1,6 +1,7 @@
 import re
 from asyncio import gather, sleep
 from contextlib import suppress
+from html import escape
 from os import path as ospath, walk
 from pyrogram.types import Message
 from re import sub
@@ -58,6 +59,7 @@ from .ext_utils.media_utils import (
     download_image_thumb,
     get_document_type,
     take_ss,
+    unsafe_ffmpeg_token,
 )
 from .ext_utils.metadata_utils import MetadataProcessor
 from .mirror_leech_utils.gdrive_utils.list import GoogleDriveList
@@ -924,6 +926,15 @@ class TaskConfig:
             ffmpeg = FFMpeg(self)
             for ffmpeg_cmd in cmds:
                 self.proceed_count = 0
+                if self.user_id != Config.OWNER_ID and (
+                    bad := unsafe_ffmpeg_token(ffmpeg_cmd)
+                ):
+                    LOGGER.warning(f"Skipping unsafe ffmpeg cmd token: {bad}")
+                    await send_message(
+                        self.message,
+                        f"FFmpeg cmd skipped: paths outside the task folder and protocols are not allowed (<code>{escape(bad)}</code>).",
+                    )
+                    continue
                 cmd = [
                     "taskset",
                     "-c",

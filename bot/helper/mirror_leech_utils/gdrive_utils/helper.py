@@ -4,7 +4,7 @@ from googleapiclient.errors import HttpError
 from json import loads as json_loads
 from logging import getLogger, ERROR
 from os import path as ospath, listdir
-from pickle import load as pload
+from pickle import Unpickler, UnpicklingError
 from random import randrange
 from re import search as re_search
 from urllib.parse import parse_qs, urlparse
@@ -17,6 +17,42 @@ from tenacity import (
 
 from ....core.config_manager import Config
 from ...ext_utils.links_utils import is_gdrive_id
+
+
+class _TokenUnpickler(Unpickler):
+    # token.pickle can be user-uploaded: only rebuild OAuth credentials, never
+    # resolve arbitrary callables (that is how a crafted pickle runs code)
+    _ALLOWED = {
+        ("google.oauth2.credentials", "Credentials"),
+        ("google.auth._regional_access_boundary_utils", "_RegionalAccessBoundaryData"),
+        ("google.auth._regional_access_boundary_utils", "_RegionalAccessBoundaryManager"),
+        (
+            "google.auth._regional_access_boundary_utils",
+            "_RegionalAccessBoundaryRefreshManager",
+        ),
+        ("datetime", "datetime"),
+        ("datetime", "timedelta"),
+        ("_codecs", "encode"),
+        ("copyreg", "_reconstructor"),
+        ("copy_reg", "_reconstructor"),
+        ("builtins", "object"),
+        ("__builtin__", "object"),
+        ("builtins", "tuple"),
+        ("__builtin__", "tuple"),
+        ("builtins", "set"),
+        ("__builtin__", "set"),
+        ("builtins", "frozenset"),
+        ("__builtin__", "frozenset"),
+    }
+
+    def find_class(self, module, name):
+        if (module, name) in self._ALLOWED:
+            return super().find_class(module, name)
+        raise UnpicklingError(f"Blocked {module}.{name} in token.pickle")
+
+
+def load_token_pickle(f):
+    return _TokenUnpickler(f).load()
 
 LOGGER = getLogger(__name__)
 getLogger("googleapiclient.discovery").setLevel(ERROR)
@@ -88,7 +124,7 @@ class GoogleDriveHelper:
         elif ospath.exists(self.token_path):
             LOGGER.info(f"Authorize with {self.token_path}")
             with open(self.token_path, "rb") as f:
-                credentials = pload(f)
+                credentials = load_token_pickle(f)
         else:
             LOGGER.error("token.pickle not found!")
         if credentials is None:
