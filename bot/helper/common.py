@@ -255,7 +255,10 @@ class TaskConfig:
             if token_path.startswith("tokens/") and status == "up":
                 self.private_link = True
             if not await aiopath.exists(token_path):
-                raise ValueError(f"NO TOKEN! {token_path} not Exists!")
+                raise ValueError(
+                    f"Google Drive is not set up: {token_path} not found. "
+                    "Owner must add token.pickle (or service accounts) via /bsetting → Private Files."
+                )
 
     async def _set_clone_options(self):
         picked = (

@@ -83,9 +83,9 @@ def start_photo():
 def _start_links(buttons, lang):
     links = Config.START_LINKS if isinstance(Config.START_LINKS, dict) else {}
     for label_, url in links.items():
-        buttons.url_button(str(label_), str(url), "f_body", ButtonStyle.SUCCESS)
+        buttons.url_button(str(label_), str(url), "f_body")
     if not links:
-        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL, "f_body", ButtonStyle.SUCCESS)
+        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL, "f_body")
 
 
 def view_only(user_id, chat):
