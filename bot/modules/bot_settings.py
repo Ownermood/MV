@@ -90,6 +90,18 @@ from .bot_settings_vars import (
     REQUIRED_SERVER_FIELDS,
 )
 
+ENGINE_OPTION_ACTIONS = {
+    "ariavar",
+    "qbitvar",
+    "nzbvar",
+    "emptyaria",
+    "emptyqbit",
+    "emptynzb",
+    "resetnzb",
+    "remser",
+    "emptyserkey",
+}
+
 start = 0
 state = "view"
 handler_dict = {}
@@ -1079,6 +1091,10 @@ async def edit_bot_settings(client, query):
         )
         or (data[1] == "private" and len(data) > 2 and data[2] in ("edit", "new"))
         or data[1] == "push"
+        # engine options hold passwords and run programs (qBit autorun_program,
+        # SABnzbd scripts), so only the owner may view or change them
+        or data[1] in ENGINE_OPTION_ACTIONS
+        or data[1].startswith("nzbsevar")
     ):
         await query.answer("Only the bot owner can access this!", show_alert=True)
         return
