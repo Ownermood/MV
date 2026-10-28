@@ -142,7 +142,10 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
                 btn_label(name, title), f"botset sec {sid} 1", icon=icon(name)
             )
         buttons.data_button(
-            btn_label("search", "Search"), "botset search", icon=icon("search")
+            btn_label("search", "Search a setting"),
+            "botset search",
+            "header",
+            icon=icon("search"),
         )
         buttons.data_button(
             btn_label("list", "All Variables"), "botset var", icon=icon("list")

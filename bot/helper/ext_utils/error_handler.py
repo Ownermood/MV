@@ -5,7 +5,7 @@ from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
 
-from .. import LOGGER
+from ... import LOGGER
 
 
 class ErrorSeverity(Enum):

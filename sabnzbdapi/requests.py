@@ -2,8 +2,12 @@ from json import JSONDecodeError
 from functools import wraps
 
 from niquests import AsyncSession
-from niquests.packages.urllib3 import disable_warnings
-from niquests.packages.urllib3.exceptions import InsecureRequestWarning
+try:
+    from niquests.packages.urllib3 import disable_warnings
+    from niquests.packages.urllib3.exceptions import InsecureRequestWarning
+except ImportError:  # niquests versions without the packages alias
+    from urllib3 import disable_warnings
+    from urllib3.exceptions import InsecureRequestWarning
 
 from .exception import APIConnectionError, APIResponseError
 from .job_functions import JobFunctions

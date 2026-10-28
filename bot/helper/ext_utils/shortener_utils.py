@@ -4,7 +4,10 @@ from asyncio import sleep as asleep
 from urllib.parse import quote
 
 from cloudscraper import create_scraper
-from niquests.packages.urllib3 import disable_warnings
+try:
+    from niquests.packages.urllib3 import disable_warnings
+except ImportError:  # niquests versions without the packages alias
+    from urllib3 import disable_warnings
 
 from ... import LOGGER, shortener_dict
 from ...core.config_manager import Config

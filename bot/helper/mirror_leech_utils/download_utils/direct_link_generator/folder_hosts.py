@@ -3,7 +3,10 @@
 from curl_cffi import Session as CurlSession
 from lxml.etree import HTML
 from niquests.adapters import HTTPAdapter
-from niquests.packages.urllib3.util.retry import Retry
+try:
+    from niquests.packages.urllib3.util.retry import Retry
+except ImportError:  # niquests versions without the packages alias
+    from urllib3.util.retry import Retry
 from niquests import Session, get, post
 from base64 import b64decode, b64encode
 from cloudscraper import create_scraper

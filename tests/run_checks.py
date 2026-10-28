@@ -48,6 +48,7 @@ CHECKS = [
     ("drive: skip blocked files", "check_gdrive_skip.py", [REPO], None),
     ("leech sections", "check_sections.py", [REPO], None),
     ("task error routing", "check_error_report.py", [REPO], None),
+    ("every module imports", "check_imports.py", [REPO], None),
 ]
 
 failed = []

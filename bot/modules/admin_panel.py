@@ -41,6 +41,24 @@ async def _save(key, value):
         await database.update_config({key: value})
 
 
+def code_version():
+    """Short commit of the running code, read from .git (no git binary needed)."""
+    try:
+        head = open(".git/HEAD").read().strip()
+        if not head.startswith("ref: "):
+            return head[:7]
+        ref = head[5:]
+        try:
+            return open(f".git/{ref}").read().strip()[:7]
+        except OSError:
+            for line in open(".git/packed-refs"):
+                if line.rstrip().endswith(ref):
+                    return line[:7]
+    except OSError:
+        pass
+    return "unknown"
+
+
 def _cb(uid, action, arg=""):
     return f"adm {uid} {action} {arg}".strip()
 
@@ -111,7 +129,8 @@ Role: <b>{role}</b>
 {e("key")} <b>Force join chats:</b> <code>{len(fsub_chats())}</code>
 {e("star")} <b>Premium emoji:</b> {_onoff(Config.PREMIUM_EMOJI)}</blockquote>
 
-Choose a section:"""
+Choose a section:
+<i>Version: {code_version()}</i>"""
     b = ButtonMaker()
     _btn(b, uid, "users", "Access", "acc")
     _btn(b, uid, "wave", "Welcome Text", "text")
