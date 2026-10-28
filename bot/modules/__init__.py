@@ -54,6 +54,7 @@ from .users_settings import (
     send_user_settings,
 )
 from .ytdlp import ytdl, ytdl_leech
+from .gallery_dl import gallery_dl, gallery_dl_leech
 
 __all__ = [
     "memory_stats",
@@ -131,4 +132,6 @@ __all__ = [
     "send_user_settings",
     "ytdl",
     "ytdl_leech",
+    "gallery_dl",
+    "gallery_dl_leech",
 ]

@@ -368,12 +368,61 @@ Set different metadata for audio/video/subtitle streams in User Settings > FFmpe
 • Video Metadata: <code>title={basename}|year={year}</code>
 • Subtitle Metadata: <code>language={sublang}|title=Subtitles</code>"""
 
+gdl = """<b>Send link along with command line</b>:
+
+/cmd link
+<b>By replying to link</b>:
+/cmd -n new name -z password -opt {"key": "value"}
+
+Check here all supported <a href='https://github.com/mikf/gallery-dl/blob/master/docs/supportedsites.md'>SITES</a>
+Check gallery-dl configuration options from this <a href='https://github.com/mikf/gallery-dl/blob/master/docs/configuration.rst'>FILE</a>."""
+
+gdl_opt = """<b>Options</b>: -opt
+
+/cmd link -opt {"image-range": "1-50", "extractor": {"pixiv": {"username": "user", "password": "pass"}, "twitter": {"cookies": {"auth_token": "abc"}}}}
+
+Supported options include:
+- <b>proxy</b>: proxy URL
+- <b>username/password</b>: credentials (dict with site keys)
+- <b>api-key</b> / <b>oauth</b>: per-site keys and tokens (dict with site keys)
+- <b>cookies</b>: dict of site cookies (your /usetting cookies file is used automatically)
+- <b>extractor</b> / <b>downloader</b>: site or scheme specific options (dict)
+- <b>image-range/chapter-range</b>, <b>image-filter/chapter-filter</b>
+- <b>filename</b> / <b>directory</b>: name formats
+- <b>sleep/sleep-request</b>: delay between requests
+
+<i>Only the bot owner can use postprocessors, config-files, archive, base-directory, output or file paths.</i>"""
+
 YT_HELP_DICT = {
     "main": yt,
     "New-Name": f"{new_name}\nNote: Don't add file extension",
     "Zip": zip_arg,
     "Quality": qual,
     "Options": yt_opt,
+    "Multi-Link": multi_link,
+    "Same-Directory": same_dir,
+    "Thumb": thumb,
+    "Split-Size": split_size,
+    "Upload-Destination": upload,
+    "Rclone-Flags": rcf,
+    "Bulk": bulk,
+    "Sample-Video": sample_video,
+    "Screenshot": screenshot,
+    "Convert-Media": convert_media,
+    "Force-Start": force_start,
+    "Name-Swap": name_swap,
+    "TG-Transmission": transmission,
+    "Thumb-Layout": thumbnail_layout,
+    "Leech-Type": leech_as,
+    "FFmpeg-Cmds": ffmpeg_cmds,
+    "Metadata": metadata,
+}
+
+GDL_HELP_DICT = {
+    "main": gdl,
+    "New-Name": f"{new_name}\nNote: Don't add file extension",
+    "Zip": zip_arg,
+    "Options": gdl_opt,
     "Multi-Link": multi_link,
     "Same-Directory": same_dir,
     "Thumb": thumb,
@@ -478,6 +527,8 @@ def get_bot_commands():
         "Leech": "[link/file] Leech files to Upload to Telegram",
         "QbLeech": "[magnet/torrent] Leech files to Upload to Telegram using qbit",
         "YtdlLeech": "[link] Leech YouTube, m3u8, Social Media and yt-dlp supported urls",
+        "Gallerydl": "[link] Mirror gallery-dl supported image/media sites",
+        "GallerydlLeech": "[link] Leech gallery-dl supported image/media sites",
         "Clone": "[link] Clone files/folders to GDrive",
         "UserSet": "User personal settings",
         "ForceStart": "[gid/reply] Force start from queued task",
@@ -558,6 +609,10 @@ def get_help_string():
             help_lines.append(f"{cmd_str}: Get direct Seedr HTTP download links.")
         elif key == "YtdlLeech":
             help_lines.append(f"{cmd_str}: Leech yt-dlp supported link.")
+        elif key == "Gallerydl":
+            help_lines.append(f"{cmd_str}: Mirror gallery-dl supported link.")
+        elif key == "GallerydlLeech":
+            help_lines.append(f"{cmd_str}: Leech gallery-dl supported link.")
         elif key == "Clone":
             help_lines.append(
                 f"{cmd_str} [drive_url]: Copy file/folder to Google Drive."

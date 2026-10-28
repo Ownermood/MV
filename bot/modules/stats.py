@@ -72,6 +72,7 @@ commands = {
     "python": (["python3", "--version"], r"Python ([\d.]+)"),
     "rclone": ([BinConfig.RCLONE_NAME, "--version"], r"rclone v([\d.]+)"),
     "yt-dlp": (["yt-dlp", "--version"], r"([\d.]+)"),
+    "gallery-dl": (["gallery-dl", "--version"], r"([\d.]+)"),
     "ffmpeg": (
         [BinConfig.FFMPEG_NAME, "-version"],
         r"ffmpeg version ([\d.]+(-\w+)?).*",
@@ -199,6 +200,7 @@ async def get_stats(event, key="home"):
 ┠ <b>SABnzbd+:</b> v{ver.get("SABnzbd+", "N/A")}
 ┠ <b>rclone:</b> v{ver.get("rclone", "N/A")}
 ┠ <b>yt-dlp:</b> v{ver.get("yt-dlp", "N/A")}
+┠ <b>gallery-dl:</b> v{ver.get("gallery-dl", "N/A")}
 ┠ <b>ffmpeg:</b> v{ver.get("ffmpeg", "N/A")}
 ┠ <b>7z:</b> v{ver.get("7z", "N/A")}
 ┠ <b>Aiohttp:</b> v{ver.get("aiohttp", "N/A")}

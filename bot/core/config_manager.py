@@ -42,6 +42,7 @@ class Config:
     DISABLE_SEARCH = False
     DISABLE_STREAM = False
     DISABLE_YTDLP = False
+    DISABLE_GALLERYDL = False
     PLUGIN_INDEXES = []
     EQUAL_SPLITS = False
     EXCLUDED_EXTENSIONS = ""
@@ -178,6 +179,7 @@ class Config:
     WEB_ACCESS_PASSWORD = ""
     WEB_PINCODE = True
     YT_DLP_OPTIONS = {}
+    GALLERY_DL_OPTIONS = {}
     YT_DESP = "Uploaded with Mirrorleach Villanbot"
     YT_TAGS = ["telegram", "bot", "youtube"]
     YT_CATEGORY_ID = 22

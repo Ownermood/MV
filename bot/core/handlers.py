@@ -419,6 +419,20 @@ async def add_handlers():
     )
     TgClient.bot.add_handler(
         MessageHandler(
+            gallery_dl,
+            filters=command(BotCommands.GallerydlCommand, case_sensitive=True)
+            & CustomFilters.authorized,
+        )
+    )
+    TgClient.bot.add_handler(
+        MessageHandler(
+            gallery_dl_leech,
+            filters=command(BotCommands.GallerydlLeechCommand, case_sensitive=True)
+            & CustomFilters.authorized,
+        )
+    )
+    TgClient.bot.add_handler(
+        MessageHandler(
             change_category,
             filters=command(BotCommands.CategorySelectCommand)
             & CustomFilters.authorized,

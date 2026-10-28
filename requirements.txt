@@ -37,4 +37,5 @@ tenacity
 uvicorn
 uvloop
 xattr
+gallery-dl
 yt-dlp[default,curl-cffi]

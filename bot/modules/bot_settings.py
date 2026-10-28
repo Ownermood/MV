@@ -114,6 +114,7 @@ BOOL_VARS = [
     "DISABLE_STREAM",
     "DISABLE_TORRENTS",
     "DISABLE_YTDLP",
+    "DISABLE_GALLERYDL",
     "DISABLE_MEGA",
     "DISABLE_PLUGINS",
     "ENABLE_TELEMETRY",
@@ -171,6 +172,7 @@ DEFAULT_DESP = {
     "DISABLE_SEARCH": "Disable torrent search plugins. Saves network I/O. Default: False.",
     "DISABLE_STREAM": "Disable streaming. Stops /stream and the stream server. Default: False.",
     "DISABLE_YTDLP": "Disable YouTube/YT-DLP downloads. Default: False.",
+    "DISABLE_GALLERYDL": "Disable gallery-dl downloads. Default: False.",
     "EQUAL_SPLITS": "Split files into equal parts of LEECH_SPLIT_SIZE. Default: False.",
     "EXCLUDED_EXTENSIONS": "File extensions to exclude from upload/clone. Space-separated.",
     "FFMPEG_CMDS": "Custom FFmpeg command presets. Dict format.",
@@ -297,6 +299,7 @@ DEFAULT_DESP = {
     "WEB_ACCESS_PASSWORD": "Secret for deriving proxy passwords. Set once, use derived passwords in browser. Empty = auto-generated.",
     "WEB_PINCODE": "Ask for pincode in web file selection. Default: True.",
     "YT_DLP_OPTIONS": "Default yt-dlp options. Format: key:value|key:value.",
+    "GALLERY_DL_OPTIONS": "Default gallery-dl options as a dict, e.g. {\"image-range\": \"1-50\"}.",
     "YT_DESP": "Description for YouTube uploads. Default: Uploaded with Mirrorleach Villanbot.",
     "YT_TAGS": "Tags for YouTube uploads. List format.",
     "YT_CATEGORY_ID": "YouTube video category ID. Default: 22 (People & Blogs).",
@@ -375,6 +378,7 @@ ONOFF_VARS = [
     "DISABLE_SEARCH",
     "DISABLE_STREAM",
     "DISABLE_YTDLP",
+    "DISABLE_GALLERYDL",
 ]
 
 LIMIT_VARS = [
