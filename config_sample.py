@@ -77,7 +77,7 @@ START_IMAGE = ""  # welcome photo: URL or Telegram file_id; empty = IMAGES / non
 START_GUIDE = True  # show the guide buttons under /start
 PREMIUM_EMOJI = True  # premium emoji in the UI; needs Telegram Premium on the bot owner's account
 LEECH_SECTIONS = True  # leech of a folder tree: a section message before/after each folder
-RICH_STATUS = False  # status card as a Telegram rich message (in-text Cancel/Select buttons); falls back to normal text
+RICH_STATUS = True  # status card as a Telegram rich message (in-text Cancel/Select buttons); falls back to normal text
 FORCE_SUB_CHATS = []  # set from /admin -> Force Join: [{"id": "-100...", "name": "Main Channel", "link": "https://t.me/..."}]
 
 # Task Limits

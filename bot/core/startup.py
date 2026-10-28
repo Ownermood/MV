@@ -272,6 +272,9 @@ RECOMMENDED_DEFAULTS = {
     # the rich card loses premium emoji when Telegram re-sends/edits it; the
     # text card keeps them and has Cancel/Select on its keyboard
     2: {"RICH_STATUS": False},
+    # rich card again (its buttons are plain text now, which may keep the
+    # premium emoji) and resuming unfinished tasks after a restart
+    3: {"RICH_STATUS": True, "INC_TASK_RESUME": True},
 }
 
 

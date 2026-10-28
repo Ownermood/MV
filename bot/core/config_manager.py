@@ -75,7 +75,7 @@ class Config:
     START_IMAGE = ""
     START_GUIDE = True
     PREMIUM_EMOJI = True
-    RICH_STATUS = False
+    RICH_STATUS = True
     LEECH_SECTIONS = True
     # bumped when new recommended defaults are applied once (core.startup)
     DEFAULTS_VERSION = 0
@@ -87,7 +87,7 @@ class Config:
     USE_IMAGES = False
     IMG_SOURCES = ["wallpaperflare"]
     INC_TASK_NOTIFY = False
-    INC_TASK_RESUME = False
+    INC_TASK_RESUME = True
     INDEX_URL = ""
     IS_TEAM_DRIVE = False
     JD_EMAIL = ""

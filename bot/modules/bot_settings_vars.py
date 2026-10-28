@@ -132,7 +132,7 @@ DEFAULT_DESP = {
     "START_IMAGE": "Welcome photo for /start: an image URL or Telegram file_id. Empty uses IMAGES or no photo. Easier from /admin.",
     "START_GUIDE": "Show the guide buttons (Leech, Mirror, ...) under /start. Default: True.",
     "LEECH_SECTIONS": "When a leech has several folders, upload them folder by folder with a Section message before and an Uploaded message after each one. Default: True.",
-    "RICH_STATUS": "Show the status card as a Telegram rich message with Cancel/Select buttons inside the text. Falls back to normal text if it fails, and is not used when status images are on. Telegram may show normal emoji instead of premium ones on it. Default: False (the text card has Cancel/Select buttons too).",
+    "RICH_STATUS": "Show the status card as a Telegram rich message with Cancel/Select buttons inside the text. Falls back to normal text if it fails, and is not used when status images are on. Its buttons are plain text. Turn off if premium emoji turn normal on it; the text card has Cancel/Select buttons too. Default: True.",
     "PREMIUM_EMOJI": "Use premium emoji in the UI. Needs Telegram Premium on the bot owner's account; /admin -> Premium Emoji can test it. Default: True.",
     "INSTADL_API": "Instagram downloader API key.",
     "IMDB_TEMPLATE": "Optional HTML template for IMDB results. If empty, uses Rich Messages.",
