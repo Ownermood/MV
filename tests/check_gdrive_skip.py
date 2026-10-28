@@ -42,7 +42,7 @@ def async_to_sync(fn, *a): return fn(*a)
 
 mod("bot"); mod("bot.helper"); mod("bot.helper.ext_utils")
 mod("bot.helper.ext_utils.bot_utils", async_to_sync=async_to_sync, SetInterval=Interval)
-mod("bot.helper.mirror_leech_utils"); mod("bot.helper.mirror_leech_utils.gdrive_utils")
+mod("bot.helper.mirror_leech_utils"); mod("bot.helper.mirror_leech_utils.gdrive_utils").__path__ = [f"{REPO}/bot/helper/mirror_leech_utils/gdrive_utils"]
 mod("bot.helper.mirror_leech_utils.gdrive_utils.helper", GoogleDriveHelper=Helper)
 spec = importlib.util.spec_from_file_location(
     "bot.helper.mirror_leech_utils.gdrive_utils.download",

@@ -232,12 +232,19 @@ class RcloneTransferHelper:
                     "--drive-acknowledge-abuse",
                     "--drive-chunk-size",
                     "128M",
+                    # was 1 file and 1 request a second: very slow for folders;
+                    # 8 a second stays under Drive's per-user rate limit
                     "--tpslimit",
-                    "1",
+                    "8",
                     "--tpslimit-burst",
-                    "1",
+                    "8",
                     "--transfers",
-                    "1",
+                    "4",
+                    # big files over several connections
+                    "--multi-thread-streams",
+                    "8",
+                    "--multi-thread-cutoff",
+                    "64M",
                 )
             )
 
@@ -369,11 +376,14 @@ class RcloneTransferHelper:
             cmd.extend(
                 (
                     "--tpslimit",
-                    "1",
+                    "8",
                     "--tpslimit-burst",
-                    "1",
+                    "8",
                     "--transfers",
-                    "1",
+                    "3",
+                    # bigger upload pieces, fewer round trips (RAM: 64M per file)
+                    "--drive-chunk-size",
+                    "64M",
                 )
             )
 
@@ -444,11 +454,11 @@ class RcloneTransferHelper:
                 (
                     "--drive-acknowledge-abuse",
                     "--tpslimit",
-                    "3",
+                    "8",
                     "--tpslimit-burst",
-                    "1",
+                    "8",
                     "--transfers",
-                    "3",
+                    "6",
                 )
             )
 

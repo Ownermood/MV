@@ -46,6 +46,7 @@ CHECKS = [
     ("video split into parts", "check_split.py", [REPO, "WORK"], None),
     ("bot settings sections", "check_bsettings_sections.py", [REPO], None),
     ("drive: skip blocked files", "check_gdrive_skip.py", [REPO], None),
+    ("drive: fast multi-connection download", "check_gdrive_fast.py", [REPO], None),
     ("leech sections", "check_sections.py", [REPO], None),
     ("task error routing", "check_error_report.py", [REPO], None),
     ("every module imports", "check_imports.py", [REPO], None),

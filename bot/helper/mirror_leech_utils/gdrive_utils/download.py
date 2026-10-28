@@ -15,6 +15,9 @@ from tenacity import (
 from ...ext_utils.bot_utils import async_to_sync
 from ...ext_utils.bot_utils import SetInterval
 from ...mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
+from .fast_download import BIG, Counter, download_big, download_many
+
+GOOGLE_APPS = "application/vnd.google-apps."
 
 LOGGER = getLogger(__name__)
 
@@ -56,7 +59,11 @@ class GoogleDriveDownload(GoogleDriveHelper):
             else:
                 makedirs(self._path, exist_ok=True)
                 self._download_file(
-                    file_id, self._path, self.listener.name, meta.get("mimeType")
+                    file_id,
+                    self._path,
+                    self.listener.name,
+                    meta.get("mimeType"),
+                    size=int(meta.get("size") or 0),
                 )
         except Exception as err:
             if isinstance(err, RetryError):
@@ -91,6 +98,7 @@ class GoogleDriveDownload(GoogleDriveHelper):
         if len(result) == 0:
             return
         result = sorted(result, key=lambda k: k["name"])
+        small = []  # fetched several at once after this loop
         for item in result:
             file_id = item["id"]
             filename = item["name"]
@@ -107,16 +115,72 @@ class GoogleDriveDownload(GoogleDriveHelper):
             ) and not filename.strip().lower().endswith(
                 tuple(self.listener.excluded_extensions)
             ):
-                self.sa_count = 1
-                try:
-                    self._download_file(file_id, path, filename, mime_type)
-                    self._downloaded += 1
-                except DownloadBlocked:
-                    # skip only this file; the rest of the folder still downloads
-                    LOGGER.info(f"Download blocked by owner, skipped: {filename}")
-                    self.skipped.append(filename)
+                size = int(item.get("size") or 0)
+                if (
+                    0 < size < BIG
+                    and shortcut_details is None
+                    and not mime_type.startswith(GOOGLE_APPS)
+                    and "/" not in filename
+                    and len(filename.encode()) <= 255
+                ):
+                    small.append((file_id, filename, mime_type))
+                else:
+                    self._download_one(file_id, path, filename, mime_type, size)
             if self.listener.is_cancelled:
                 break
+        if small and not self.listener.is_cancelled:
+            self._download_small(small, path)
+
+    def _download_one(self, file_id, path, filename, mime_type, size=0):
+        self.sa_count = 1
+        try:
+            self._download_file(file_id, path, filename, mime_type, size=size)
+            self._downloaded += 1
+        except DownloadBlocked:
+            # skip only this file; the rest of the folder still downloads
+            LOGGER.info(f"Download blocked by owner, skipped: {filename}")
+            self.skipped.append(filename)
+
+    def _start_counter(self):
+        counter = Counter()
+        self.file_processed_bytes = 0
+        self.status = counter
+        return counter
+
+    def _stop_counter(self, counter, keep):
+        """keep: add the bytes to the task total; else take back what was shown."""
+        if keep:
+            self.proc_bytes += counter.bytes - self.file_processed_bytes
+        else:
+            self.proc_bytes -= self.file_processed_bytes
+        self.file_processed_bytes = 0
+        self.status = None
+
+    def _download_small(self, files, path):
+        """Small files of one folder, several at once; any that fail go
+        through the normal download (blocked files, quota, retries)."""
+        names = {file_id: (name, mime) for file_id, name, mime in files}
+        jobs = [(file_id, f"{path}/{name}") for file_id, name, _ in files]
+        counter = self._start_counter()
+        try:
+            failed = download_many(
+                self.service._http.credentials,
+                jobs,
+                counter,
+                lambda: self.listener.is_cancelled,
+            )
+        except Exception as err:
+            LOGGER.info(f"Parallel Drive download not possible ({err}), one by one")
+            failed = jobs
+            counter.bytes = 0
+        self._stop_counter(counter, True)
+        self._downloaded += len(jobs) - len(failed)
+        for file_id, out_path in failed:
+            if self.listener.is_cancelled:
+                return
+            _drop(out_path)
+            name, mime = names[file_id]
+            self._download_one(file_id, path, name, mime)
 
     _downloaded = 0
 
@@ -125,7 +189,7 @@ class GoogleDriveDownload(GoogleDriveHelper):
         stop=stop_after_attempt(3),
         retry=retry_if_not_exception_type(DownloadBlocked),
     )
-    def _download_file(self, file_id, path, filename, mime_type, export=False):
+    def _download_file(self, file_id, path, filename, mime_type, export=False, size=0):
         if export:
             request = self.service.files().export_media(
                 fileId=file_id, mimeType="application/pdf"
@@ -145,6 +209,24 @@ class GoogleDriveDownload(GoogleDriveHelper):
                 self.listener.name = filename
         if self.listener.is_cancelled:
             return
+        if size >= BIG and not export and not mime_type.startswith(GOOGLE_APPS):
+            counter = self._start_counter()
+            try:
+                download_big(
+                    self.service._http.credentials,
+                    file_id,
+                    f"{path}/{filename}",
+                    size,
+                    counter,
+                    lambda: self.listener.is_cancelled,
+                )
+                self._stop_counter(counter, True)
+                return
+            except Exception as err:
+                self._stop_counter(counter, False)
+                if self.listener.is_cancelled:
+                    return
+                LOGGER.info(f"Multi-connection Drive download failed ({err}), using one")
         fh = FileIO(f"{path}/{filename}", "wb")
         downloader = MediaIoBaseDownload(fh, request, chunksize=100 * 1024 * 1024)
         done = False
