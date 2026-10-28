@@ -44,10 +44,16 @@ def _cb(uid, action, arg=""):
     return f"adm {uid} {action} {arg}".strip()
 
 
+RED_ICONS = {"close", "remove", "trash"}
+
+
 def _btn(buttons, uid, name, text, action, arg="", position=None, on=False):
-    # no colours except green for things that are switched on
+    # green: switched on · red: close/remove · blue: everything else
+    style = (
+        GREEN if on else ButtonStyle.DANGER if name in RED_ICONS else ButtonStyle.PRIMARY
+    )
     buttons.data_button(
-        label(name, text), _cb(uid, action, arg), position, GREEN if on else None, icon(name)
+        label(name, text), _cb(uid, action, arg), position, style, icon(name)
     )
 
 
@@ -166,7 +172,7 @@ async def _btns_page(uid, note=""):
     rows = "\n".join(
         f"{i}. {escape(str(k))} → <code>{escape(str(v))}</code>"
         for i, (k, v) in enumerate(links.items(), 1)
-    ) or "<i>None — one Updates button to AUTHOR_URL is shown.</i>"
+    ) or "<i>None — the Force Join chats are shown as buttons.</i>"
     text = f"""{e("link")} <b>Start Buttons</b>
 {LINE}
 <b>Link buttons:</b>

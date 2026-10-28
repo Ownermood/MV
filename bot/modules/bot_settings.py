@@ -61,6 +61,9 @@ from ..core.config_manager import Config, DEFAULT_CONFIG
 from ..helper.telegram_helper.emoji import e, icon, label as btn_label
 from .bot_settings_sections import (
     SECTIONS,
+    key_list_text,
+    key_state,
+    pretty_key,
     home_text,
     page_buttons,
     page_slice,
@@ -157,7 +160,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
             btn_label("back", "Admin Panel"),
             "botset adminpanel",
             "footer",
-            style=ButtonStyle.DANGER,
+            style=ButtonStyle.PRIMARY,
             icon=icon("back"),
         )
         buttons.data_button(
@@ -203,12 +206,12 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
             else:
                 msg = f"<i>Send a valid value for <code>{key}</code> in server <code>{Config.USENET_SERVERS[index]['name']}</code>.</i> Current value is <code>{Config.USENET_SERVERS[index][key]}</code>\n┖ <b>Time Left :</b> <code>60 sec</code>"
         elif edit_type == "editvar":
-            msg = f"<b>Variable:</b> <code>{key}</code>\n\n"
-            msg += f"<b>Description:</b> {DEFAULT_DESP.get(key, 'No Description Provided')}\n\n"
+            msg = f"{e('edit')} <b>{pretty_key(key)}</b>\n<code>{key}</code>\n\n"
+            msg += f"<blockquote>{DEFAULT_DESP.get(key, 'No description.')}</blockquote>\n"
             value = Config.get(key)
             if value == "":
                 value = "None"
-            msg += f"<b>Current Value:</b> <code>{value}</code>\n\n"
+            msg += f"<b>Current value:</b> <code>{value}</code>\n\n"
             buttons.data_button(
                 "View Value", f"botset showvar {key}", position="header"
             )
@@ -227,9 +230,19 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
                 else:
                     buttons.data_button("Stop Edit", f"botset editvar {key}")
             else:
-                msg += "<i>Choose a valid value for the above Var</i>\n\n"
-                buttons.data_button("True", f"botset boolvar {key} on")
-                buttons.data_button("False", f"botset boolvar {key} off")
+                msg += "<i>Turn it on or off:</i>\n\n"
+                buttons.data_button(
+                    btn_label("on", "ON"),
+                    f"botset boolvar {key} on",
+                    style=ButtonStyle.SUCCESS if value is True else None,
+                    icon=icon("on"),
+                )
+                buttons.data_button(
+                    btn_label("off", "OFF"),
+                    f"botset boolvar {key} off",
+                    style=ButtonStyle.DANGER if value is False else None,
+                    icon=icon("off"),
+                )
             if key not in BOOL_VARS and key not in PROTECTED_VARS:
                 buttons.data_button("Reset", f"botset resetvar {key}")
             buttons.data_button(
@@ -248,18 +261,22 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
             if not k.startswith("DISABLE_") and k not in LIMIT_VARS
         }
         all_keys = list(conf_dict.keys())
-        for k in all_keys[start : 10 + start]:
-            buttons.data_button(k, f"botset editvar {k}")
+        _key_buttons(buttons, all_keys[start : 10 + start])
         buttons.data_button("Back", "botset back")
         buttons.data_button("Close", "botset close", style=ButtonStyle.DANGER)
         for x in range(0, len(all_keys), 10):
             n = int(x / 10) + 1
             buttons.data_button(
-                f"•{n}•" if x == start else f"{n}",
+                f"• {n} •" if x == start else f"{n}",
                 f"botset start var {x}",
-                position="footer",
+                position="l_body",
+                style=ButtonStyle.SUCCESS if x == start else ButtonStyle.PRIMARY,
             )
-        msg = f"⌬ <b><u>Config Variables</u></b> | <b><u>Page: {int(start / 10) + 1}</b></u>"
+        msg = (
+            f"{e('list')} <b>All Variables</b>  ·  page {int(start / 10) + 1}/{-(-len(all_keys) // 10)}\n"
+            f"<blockquote expandable>{key_list_text(all_keys[start : 10 + start])}</blockquote>\n"
+            f"{e('info')} <i>Tap a setting below to view or change it.</i>"
+        )
     elif key == "setonoff":
         buttons.data_button("On/Off Settings", "botset settoggle")
         buttons.data_button("Limit Settings", "botset setlimit")
@@ -267,28 +284,35 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
         buttons.data_button(
             "Close", "botset close", position="footer", style=ButtonStyle.DANGER
         )
-        msg = "⌬ <b><u>Module Settings</u></b>"
+        msg = (
+            f"{e('on')} <b>Module Settings</b>\n"
+            "<blockquote>Turn bot features on or off, and set size limits.</blockquote>"
+        )
     elif key == "settoggle":
         for k in ONOFF_VARS:
             val = Config.get(k)
             label = k.removeprefix("DISABLE_")
+            # DISABLE_X false = the feature is on (green); disabled ones stay blue
             if not val:
                 buttons.data_button(
-                    f"✓ {label}",
+                    f"✓ {pretty_key(label)}",
                     f"botset toggleonoff {k} on",
-                    style=ButtonStyle.PRIMARY,
+                    style=ButtonStyle.SUCCESS,
                 )
             else:
                 buttons.data_button(
-                    label,
+                    pretty_key(label),
                     f"botset toggleonoff {k} off",
-                    style=ButtonStyle.DANGER,
+                    style=ButtonStyle.PRIMARY,
                 )
         buttons.data_button("Back", "botset back setonoff", position="footer")
         buttons.data_button(
             "Close", "botset close", position="footer", style=ButtonStyle.DANGER
         )
-        msg = "⌬ <b><u>On/Off Settings</u></b>"
+        msg = (
+            f"{e('on')} <b>Features On/Off</b>\n"
+            "<blockquote>✓ green = on  ·  blue = off. Tap to switch.</blockquote>"
+        )
     elif key == "setlimit":
         page_vars = LIMIT_VARS[start : 10 + start]
         for k in page_vars:
@@ -419,7 +443,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
                 ]
             ]
         )
-        msg = f"""⌬ <b>Private File Settings</b>
+        msg = f"""{e('key')} <b>Private Files</b>
 ┠ <b>Dashboard :</b> 
 ┃
 ┠ {txt}
@@ -444,7 +468,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
             buttons.data_button(
                 f"{int(x / 10)}", f"botset start aria {x}", position="footer"
             )
-        msg = f"Aria2c Options | Page: {int(start / 10)} | State: {state}"
+        msg = f"{e('bolt')} <b>Aria2c Options</b>  ·  page {int(start / 10)}  ·  <i>{state}</i>"
     elif key == "qbit":
         for k in list(qbit_options.keys())[start : 10 + start]:
             buttons.data_button(k, f"botset qbitvar {k}")
@@ -459,7 +483,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
             buttons.data_button(
                 f"{int(x / 10)}", f"botset start qbit {x}", position="footer"
             )
-        msg = f"Qbittorrent Options | Page: {int(start / 10)} | State: {state}"
+        msg = f"{e('download')} <b>qBittorrent Options</b>  ·  page {int(start / 10)}  ·  <i>{state}</i>"
     elif key == "nzb":
         for k in list(nzb_options.keys())[start : 10 + start]:
             buttons.data_button(k, f"botset nzbvar {k}")
@@ -475,7 +499,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
             buttons.data_button(
                 f"{int(x / 10)}", f"botset start nzb {x}", position="footer"
             )
-        msg = f"Sabnzbd Options | Page: {int(start / 10)} | State: {state}"
+        msg = f"{e('server')} <b>SABnzbd Options</b>  ·  page {int(start / 10)}  ·  <i>{state}</i>"
     elif key == "nzbserver":
         servers = (
             Config.USENET_SERVERS if isinstance(Config.USENET_SERVERS, list) else []
@@ -491,7 +515,7 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
                 buttons.data_button(
                     f"{int(x / 10)}", f"botset start nzbser {x}", position="footer"
                 )
-        msg = f"Usenet Servers | Page: {int(start / 10)} | State: {state}"
+        msg = f"{e('server')} <b>Usenet Servers</b>  ·  page {int(start / 10)}  ·  <i>{state}</i>"
     elif key.startswith("nzbser"):
         servers = (
             Config.USENET_SERVERS if isinstance(Config.USENET_SERVERS, list) else []
@@ -513,11 +537,26 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
                 buttons.data_button(
                     f"{int(x / 10)}", f"botset start {key} {x}", position="footer"
                 )
-        msg = f"Server Keys | Page: {int(start / 10)} | State: {state}"
+        msg = f"{e('key')} <b>Server Keys</b>  ·  page {int(start / 10)}  ·  <i>{state}</i>"
     else:
         msg = "Unknown option"
 
+    _paint(buttons)
     return msg, buttons.build_menu(2, lb_cols=8)
+
+
+def _paint(buttons):
+    """Same colours on every page: Back blue, Close red, plain buttons blue."""
+    for row in buttons.buttons.values():
+        for b in row:
+            name = b.text.strip()
+            if name in ("Back", "Close"):
+                ico = name.lower()
+                b.text = btn_label(ico, name)
+                b.icon_custom_emoji_id = icon(ico)
+                b.style = ButtonStyle.DANGER if name == "Close" else ButtonStyle.PRIMARY
+            elif b.style in (None, ButtonStyle.DEFAULT):
+                b.style = ButtonStyle.PRIMARY
 
 
 async def update_buttons(message, key=None, edit_type=None, edit_mode=False):
@@ -1132,13 +1171,25 @@ last_view = {}
 
 
 def _key_buttons(buttons, keys):
+    # green = switched on, blue = everything else
     for k in keys:
-        buttons.data_button(k, f"botset editvar {k}")
+        state = key_state(k)
+        name = {"on": "done", "off": "off", "set": "key", "empty": "edit"}[state]
+        buttons.data_button(
+            btn_label(name, pretty_key(k)),
+            f"botset editvar {k}",
+            style=ButtonStyle.SUCCESS if state == "on" else ButtonStyle.PRIMARY,
+            icon=icon(name),
+        )
 
 
 def _nav_footer(buttons):
     buttons.data_button(
-        btn_label("back", "Back"), "botset back", "footer", icon=icon("back")
+        btn_label("back", "Back"),
+        "botset back",
+        "footer",
+        style=ButtonStyle.PRIMARY,
+        icon=icon("back"),
     )
     buttons.data_button(
         btn_label("close", "Close"),
@@ -1164,6 +1215,7 @@ def section_page(chat_id, sid, page):
         buttons.data_button("Sabnzbd Settings", "botset nzb", "header")
     page_buttons(buttons, pages, page, f"botset sec {sid} {{}}")
     _nav_footer(buttons)
+    _paint(buttons)
     return section_text(sid, keys, page, pages), buttons.build_menu(2, lb_cols=8)
 
 
@@ -1178,6 +1230,7 @@ def search_page(chat_id, query, page):
     )
     page_buttons(buttons, pages, page, "botset srch {}")
     _nav_footer(buttons)
+    _paint(buttons)
     return search_text(query, keys, page, pages, len(found)), buttons.build_menu(2, lb_cols=8)
 
 

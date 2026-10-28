@@ -68,7 +68,9 @@ for prem in (False, True):
     print(f"PASS section pages html, < 4096, no secrets (premium={prem})" if ok else "FAIL section pages")
 
 t = sec.key_list_text(["BOT_TOKEN", "BOT_PM", "LEECH_PREFIX"])
-check("states: set / ON / empty", "● set" in t and "✅ ON" in t and "○ empty" in t)
+check("states: Set / ON / Empty", "<i>Set</i>" in t and "<i>ON</i>" in t and "<i>Empty</i>" in t and "Bot PM" in t)
+names = {k: sec.pretty_key(k) for k in ("LEECH_SPLIT_SIZE", "BOT_PM", "GD_DESP", "YT_DLP_OPTIONS", "TMDB_ACCESS_TOKEN")}
+check(f"readable names {list(names.values())}", list(names.values()) == ["Leech Split Size", "Bot PM", "GD Description", "YT Dlp Options", "TMDB Access Token"])
 found = sec.search_keys("split")
 check(f"search 'split' -> {found[:3]}", found and found[0] in ("LEECH_SPLIT_SIZE", "EQUAL_SPLITS"))
 check("search 'drive' finds GDRIVE_ID", "GDRIVE_ID" in sec.search_keys("drive"))
@@ -79,7 +81,8 @@ check("search query is escaped", "&lt;b&gt;" in t and html_ok(t))
 
 b = ButtonMaker(); sec.page_buttons(b, 5, 3, "botset sec cloud {}")
 labels = [x.text for x in b.buttons["l_body"]]
-check(f"page numbers {labels}", labels == ["1", "2", "•3•", "4", "5"])
+styles = [x.style.name for x in b.buttons["l_body"]]
+check(f"page numbers {labels} {styles}", labels == ["1", "2", "• 3 •", "4", "5"] and styles == ["PRIMARY", "PRIMARY", "SUCCESS", "PRIMARY", "PRIMARY"])
 longest = max(len(f"botset editvar {k}".encode()) for k in keys)
 check(f"callback data <= 64 bytes (longest {longest})", longest <= 64 and all(len(f"botset sec {s} 99".encode()) <= 64 for s in sec.SECTIONS))
 print("ALL PASS" if ok else "SOME FAILED")

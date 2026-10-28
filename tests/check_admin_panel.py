@@ -104,7 +104,7 @@ async def main():
         Cfg.PREMIUM_EMOJI = prem
         for page in ("home", "text", "img", "btns", "bc", "prem", "fj", "grp"):
             await click(f"adm 7 {page}")
-            t(f"page {page} valid (premium={prem})", valid(m.text, m.markup) and all(r[2] in (None, ap.GREEN) for r in m.markup))
+            t(f"page {page} valid (premium={prem})", valid(m.text, m.markup) and all(r[2] in (ap.GREEN, ap.ButtonStyle.PRIMARY, ap.ButtonStyle.DANGER) for r in m.markup) and all(r[2] == ap.ButtonStyle.DANGER for r in m.markup if r[1].endswith(" close")))
     Cfg.PREMIUM_EMOJI = False
     q = await click("adm 7 home", uid=8); t("other admin blocked", q.alerts and "another admin" in q.alerts[0])
     answers.append(Str("Welcome to my bot")); await click("adm 7 text_set")
@@ -124,7 +124,7 @@ async def main():
     await click("adm 7 tog_guide")
     t("guide toggle saved", saved["START_GUIDE"] is False)
     guide_btn = [r for r in m.markup if r[1] == "adm 7 tog_guide"][0]
-    t("OFF toggle has no colour", guide_btn[2] is None)
+    t("OFF toggle is blue", guide_btn[2] == ap.ButtonStyle.PRIMARY)
     await click("adm 7 tog_guide")
     guide_btn = [r for r in m.markup if r[1] == "adm 7 tog_guide"][0]
     t("ON toggle is green", guide_btn[2] == ap.GREEN)

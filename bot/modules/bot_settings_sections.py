@@ -3,11 +3,30 @@
 # "botset editvar KEY" in bot_settings.py, so every variable keeps its handler.
 from html import escape
 
+from pyrogram.enums import ButtonStyle
+
 from ..core.config_manager import Config
 from ..helper.telegram_helper.emoji import e
 from .bot_settings_vars import BOOL_VARS, DEFAULT_DESP, LIMIT_VARS
 
 PER_PAGE = 8
+
+_UPPER = {
+    "PM", "ID", "URL", "API", "GD", "YT", "DL", "RSS", "NZB", "JD", "TG", "SA", "FF",
+    "IP", "TTL", "UI", "TMDB", "IMDB", "CPU", "RC", "SSL", "UL", "DDL", "TV",
+}
+_WORDS = {"DESP": "Description", "IMG": "Image", "CMDS": "Commands", "CMD": "Command",
+          "INC": "Incomplete", "PASS": "Password", "MEM": "Memory", "DIR": "Folder"}
+
+
+def pretty_key(key):
+    """LEECH_SPLIT_SIZE -> Leech Split Size (the real name stays in callbacks)."""
+    words = []
+    for w in key.split("_"):
+        if not w:
+            continue
+        words.append(w if w in _UPPER else _WORDS.get(w, w.capitalize()))
+    return " ".join(words)
 
 # id: (emoji name, title, what the map says, keys). "adv" takes every key not listed.
 SECTIONS = {
@@ -97,29 +116,45 @@ def short_desc(key, limit=70):
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
-def _state(key):
-    # values are never printed here: many are tokens or passwords
+def key_state(key):
+    """'on', 'off', 'set' or 'empty'. Values are never shown: many are secrets."""
     value = Config.get(key)
     if key in BOOL_VARS or isinstance(value, bool):
-        return "✅ ON" if value else "❌ OFF"
-    return "● set" if value not in ("", None, 0, [], {}) else "○ empty"
+        return "on" if value else "off"
+    return "set" if value not in ("", None, 0, [], {}) else "empty"
+
+
+_STATE_TEXT = {
+    "on": ("done", "ON"),
+    "off": ("off", "OFF"),
+    "set": ("key", "Set"),
+    "empty": ("remove", "Empty"),
+}
 
 
 def key_list_text(keys):
     rows = []
     for k in keys:
+        icon_name, word = _STATE_TEXT[key_state(k)]
         desc = short_desc(k)
-        rows.append(f"<b>{k}</b> · {_state(k)}" + (f"\n<i>{escape(desc)}</i>" if desc else ""))
-    return "\n".join(rows)
+        rows.append(
+            f"{e(icon_name)} <b>{pretty_key(k)}</b> · <i>{word}</i>"
+            + (f"\n      {escape(desc)}" if desc else "")
+        )
+    return "\n\n".join(rows)
 
 
 def page_buttons(buttons, pages, current, data_fmt):
-    """Numbered page buttons 1 2 3 …, the open page marked •n•."""
+    """Numbered page buttons 1 2 3 …: open page green, the rest blue."""
     if pages <= 1:
         return
     for n in range(1, pages + 1):
-        text = f"•{n}•" if n == current else str(n)
-        buttons.data_button(text, data_fmt.format(n), position="l_body")
+        buttons.data_button(
+            f"• {n} •" if n == current else str(n),
+            data_fmt.format(n),
+            position="l_body",
+            style=ButtonStyle.SUCCESS if n == current else ButtonStyle.PRIMARY,
+        )
 
 
 def page_slice(keys, page):
@@ -149,10 +184,10 @@ def home_text():
 def section_text(sid, keys, page, pages):
     icon, title, about, _ = SECTIONS[sid]
     return (
-        f"{e(icon)} <b>{title}</b> · page {page}/{pages}\n"
-        f"<i>{about}</i>\n\n"
-        f"<blockquote>{key_list_text(keys) or 'Nothing here.'}</blockquote>\n"
-        "<i>Tap a setting to view or change it.</i>"
+        f"{e(icon)} <b>{title} Settings</b>\n"
+        f"<i>{about}</i>  ·  page {page}/{pages}\n\n"
+        f"<blockquote expandable>{key_list_text(keys) or 'Nothing here.'}</blockquote>\n"
+        f"{e('info')} <i>Tap a setting below to view or change it.</i>"
     )
 
 
@@ -165,6 +200,6 @@ def search_text(query, keys, page, pages, total):
         )
     return (
         f"{e('search')} <b>Search:</b> <code>{escape(query)}</code> · {total} found · page {page}/{pages}\n\n"
-        f"<blockquote>{key_list_text(keys)}</blockquote>\n"
-        "<i>Tap a setting to view or change it.</i>"
+        f"<blockquote expandable>{key_list_text(keys)}</blockquote>\n"
+        f"{e('info')} <i>Tap a setting below to view or change it.</i>"
     )
