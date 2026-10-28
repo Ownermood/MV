@@ -433,6 +433,18 @@ async def add_handlers():
     )
     TgClient.bot.add_handler(
         MessageHandler(
+            rclone_fm,
+            filters=command(BotCommands.RcloneFmCommand, case_sensitive=True)
+            & CustomFilters.authorized,
+        )
+    )
+    TgClient.bot.add_handler(
+        CallbackQueryHandler(
+            rclone_fm_cb, filters=regex("^rcfm ") & CustomFilters.authorized
+        )
+    )
+    TgClient.bot.add_handler(
+        MessageHandler(
             change_category,
             filters=command(BotCommands.CategorySelectCommand)
             & CustomFilters.authorized,

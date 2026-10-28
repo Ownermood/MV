@@ -551,6 +551,7 @@ def get_bot_commands():
         "Gallerydl": "[link] Mirror gallery-dl supported image/media sites",
         "GallerydlLeech": "[link] Leech gallery-dl supported image/media sites",
         "Clone": "[link] Clone files/folders to GDrive",
+        "RcloneFm": "Rclone file manager: browse, storage, trash, rename, delete",
         "UserSet": "User personal settings",
         "ForceStart": "[gid/reply] Force start from queued task",
         "Count": "[link] Count no. of files/folders in GDrive",
@@ -637,6 +638,10 @@ def get_help_string():
         elif key == "Clone":
             help_lines.append(
                 f"{cmd_str} [drive_url]: Copy file/folder to Google Drive."
+            )
+        elif key == "RcloneFm":
+            help_lines.append(
+                f"{cmd_str}: Rclone file manager (browse, storage, empty trash, size, rename, delete, mkdir, dedupe)."
             )
         elif key == "Count":
             help_lines.append(

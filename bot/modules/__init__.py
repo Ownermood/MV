@@ -55,6 +55,7 @@ from .users_settings import (
 )
 from .ytdlp import ytdl, ytdl_leech
 from .gallery_dl import gallery_dl, gallery_dl_leech
+from .rclone_fm import rclone_fm, rclone_fm_cb
 
 __all__ = [
     "memory_stats",
@@ -134,4 +135,6 @@ __all__ = [
     "ytdl_leech",
     "gallery_dl",
     "gallery_dl_leech",
+    "rclone_fm",
+    "rclone_fm_cb",
 ]

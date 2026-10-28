@@ -22,6 +22,7 @@ class BotCommands:
         "NzbLeech": ["nzbleech", "nl"],
         "SeedrLink": ["seedrlink", "slink", "srlink"],
         "Clone": ["clone", "cl"],
+        "RcloneFm": ["rcfm", "rclonefm"],
         "Count": "count",
         "Delete": "del",
         "List": "list",
