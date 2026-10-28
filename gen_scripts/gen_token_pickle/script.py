@@ -9,7 +9,6 @@ for use with other Google Drive-related scripts.
 import sys
 import pickle
 import socket
-import webbrowser
 
 from os.path import exists
 from google.auth.transport.requests import Request
@@ -102,15 +101,16 @@ def run_flow():
     port = find_port()
     if port:
         try:
-            print("\n[INFO] Opening browser for authentication...")
-            auth_url, _ = flow.authorization_url(prompt="consent")
-            try:
-                webbrowser.open(auth_url)
-            except Exception:
-                pass
-            print(f"[INFO] If browser didn't open, visit: {auth_url}")
+            # run_local_server builds the URL with the localhost redirect_uri;
+            # a URL from authorization_url() before it has none and Google rejects it.
+            # The browser is not opened from here: on WSL/servers it starts a text browser.
             print(f"[INFO] Waiting for authentication on port {port}...")
-            return flow.run_local_server(port=port, open_browser=False)
+            return flow.run_local_server(
+                port=port,
+                open_browser=False,
+                prompt="consent",
+                authorization_prompt_message="\n[INFO] Open this link in your browser:\n{url}\n",
+            )
         except Exception as e:
             print(f"[WARN] Browser auth failed: {e}")
             print("[INFO] Falling back to console authentication...")
