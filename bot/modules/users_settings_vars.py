@@ -54,6 +54,7 @@ advanced_options = [
 
 ytdlp_options = [
     "YT_DLP_OPTIONS",
+    "GALLERY_DL_OPTIONS",
     "USER_COOKIE_FILE",
     "YT_DESP",
     "YT_TAGS",
@@ -201,6 +202,16 @@ Example: {"format": "bv*+mergeall[vcodec=none]", "nocheckcertificate": True, "pl
 Check all yt-dlp api options from this <a href='https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/YoutubeDL.py#L184'>FILE</a> or use this <a href='https://t.me/mltb_official_channel/177'>script</a> to convert cli arguments to api options.
 
 <i>Send dict of YT-DLP Options according to format.</i> \n┖ <b>Time Left :</b> <code>60 sec</code>""",
+    ),
+    "GALLERY_DL_OPTIONS": (
+        "Dict of options",
+        "Passed into gallery-dl for every /gallerydl task when no -opt is given.",
+        """Format: {key: value, key: value}.
+Example: {"image-range": "1-50", "extractor": {"pixiv": {"username": "user", "password": "pass"}}}
+Only the bot owner can use postprocessors, config-files, archive, base-directory, output or file paths.
+Check gallery-dl options from this <a href='https://github.com/mikf/gallery-dl/blob/master/docs/configuration.rst'>FILE</a>.
+
+<i>Send dict of gallery-dl Options according to format.</i> \n┖ <b>Time Left :</b> <code>60 sec</code>""",
     ),
     "FFMPEG_CMDS": (
         "Dict of lists",

@@ -906,6 +906,15 @@ async def get_user_settings(from_user, stype="main"):
             ytopt = Config.YT_DLP_OPTIONS
         else:
             ytopt = "None"
+        buttons.data_button(
+            "gallery-dl Options", f"userset {user_id} menu GALLERY_DL_OPTIONS", "header"
+        )
+        if user_dict.get("GALLERY_DL_OPTIONS", False):
+            gdlopt = user_dict["GALLERY_DL_OPTIONS"]
+        elif "GALLERY_DL_OPTIONS" not in user_dict and Config.GALLERY_DL_OPTIONS:
+            gdlopt = Config.GALLERY_DL_OPTIONS
+        else:
+            gdlopt = "None"
 
         yt_cookie_path = f"cookies/{user_id}/cookies.txt"
         user_cookie_msg = (
@@ -965,6 +974,7 @@ async def get_user_settings(from_user, stype="main"):
 ┟ <b>Name</b> → {user_name}
 ┃
 ┠ <b>YT-DLP Options</b> → <code>{ytopt}</code>
+┠ <b>gallery-dl Options</b> → <code>{escape(str(gdlopt))}</code>
 ┠ <b>Cookie File</b> → <b>{user_cookie_msg}</b>
 ┠ <b>Cookie In Use</b> → <b>{cookie_mode}</b>
 ┃
@@ -1332,7 +1342,13 @@ async def set_option(_, message, option, rfunc):
         else:
             value = {}
 
-    elif option in ["UPLOAD_PATHS", "FFMPEG_CMDS", "YT_DLP_OPTIONS", "DRIVE_CAT"]:
+    elif option in [
+        "UPLOAD_PATHS",
+        "FFMPEG_CMDS",
+        "YT_DLP_OPTIONS",
+        "GALLERY_DL_OPTIONS",
+        "DRIVE_CAT",
+    ]:
         if value.startswith("{") and value.endswith("}"):
             try:
                 value = literal_eval(sub(r"\s+", " ", value))
@@ -1393,6 +1409,7 @@ async def get_menu(option, message, user_id):
             )
         elif option in [
             "YT_DLP_OPTIONS",
+            "GALLERY_DL_OPTIONS",
             "FFMPEG_CMDS",
             "UPLOAD_PATHS",
             "DRIVE_CAT",
@@ -1488,7 +1505,7 @@ async def get_menu(option, message, user_id):
         else:
             val = "<b>Not Exists</b>"
 
-    elif option in ["FFMPEG_CMDS", "YT_DLP_OPTIONS", "UPLOAD_PATHS"]:
+    elif option in ["FFMPEG_CMDS", "YT_DLP_OPTIONS", "GALLERY_DL_OPTIONS", "UPLOAD_PATHS"]:
         val = f"<code>{escape(str(val))}</code>" if val else "<b>Not Exists</b>"
 
     if option == "METADATA":
