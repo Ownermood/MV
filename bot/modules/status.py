@@ -97,6 +97,11 @@ async def status_pages(_, query):
     key = int(data[1])
     if data[2] == "ref":
         await update_status_message(key, force=True)
+        try:
+            await query.answer("Status refreshed")
+        except QueryIdInvalid:
+            pass
+        return
     elif data[2] in ["nex", "pre"]:
         async with task_dict_lock:
             if key in status_dict:

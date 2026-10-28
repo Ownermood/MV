@@ -74,7 +74,7 @@ for prem in (False, True):
         msg, btn = asyncio.run(su.get_readable_message(1, False))
         p = P(); p.feed(msg)
         labels = [b.text for row in btn.inline_keyboard for b in row]
-        good = not p.bad and not p.stack and "/c_e90c669b" in msg and "&lt;S01&gt;" in msg and ("tg-emoji" in msg) == prem and any("Refresh" in l for l in labels)
+        good = not p.bad and not p.stack and "/c_e90c669b" in msg and "&lt;S01&gt;" in msg and ("tg-emoji" in msg) == prem and any("Refresh" in l for l in labels) and not any("Stats" in l for l in labels)
         ok &= good
         print(f"{'PASS' if good else 'FAIL'} premium={prem!s:5} {st:9} {len(msg)} chars, buttons {labels}")
 TASKS = [Task("Download") for _ in range(6)]

@@ -369,13 +369,6 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
             msg = f"{e('info')} No active <b>{status}</b> tasks.\n\n"
 
     buttons = ButtonMaker()
-    if not is_user:
-        buttons.data_button(
-            btn_label("chart", "Stats"),
-            f"status {sid} ov",
-            position="header",
-            icon=icon("chart"),
-        )
     buttons.data_button(
         btn_label("bolt", "Refresh"),
         f"status {sid} ref",
