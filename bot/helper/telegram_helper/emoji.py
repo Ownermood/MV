@@ -23,7 +23,9 @@ EMOJI = {
     "on": ("🔛", "5445279663809130789"),
     "off": ("📴", "5445349654596189741"),
     "users": ("🫂", "5445372439397691719"),
-    "close": ("❌", "5445092669522996408"),
+    # the pack's "❌" (5445092669522996408) is drawn as a person icon, so close
+    # stays a normal emoji until a real cross icon id is known
+    "close": ("❌", ""),
     "link": ("🔗", "5447479640547428304"),
     "back": ("↩️", "5445362436418859744"),
     "prev": ("⬅️", "5447506720316225765"),
@@ -55,14 +57,14 @@ EMOJI = {
 def e(name):
     """Emoji for message text: premium when enabled, plain otherwise."""
     char, emoji_id = EMOJI[name]
-    if Config.PREMIUM_EMOJI:
+    if Config.PREMIUM_EMOJI and emoji_id:
         return f'<tg-emoji emoji-id="{emoji_id}">{char}</tg-emoji>'
     return char
 
 
 def icon(name):
     """custom_emoji_id for a button icon, or None when premium emoji is off."""
-    return EMOJI[name][1] if Config.PREMIUM_EMOJI and name in EMOJI else None
+    return (EMOJI[name][1] or None) if Config.PREMIUM_EMOJI and name in EMOJI else None
 
 
 def label(name, text):

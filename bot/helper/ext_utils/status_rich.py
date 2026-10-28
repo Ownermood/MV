@@ -26,7 +26,7 @@ def _bold(text):
 
 def _emoji(name):
     char, emoji_id = EMOJI[name]
-    if Config.PREMIUM_EMOJI:
+    if Config.PREMIUM_EMOJI and emoji_id:
         return raw.types.TextCustomEmoji(document_id=int(emoji_id), alt=char)
     return _plain(char)
 
