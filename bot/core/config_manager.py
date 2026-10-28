@@ -76,6 +76,7 @@ class Config:
     START_GUIDE = True
     PREMIUM_EMOJI = True
     RICH_STATUS = True
+    LEECH_SECTIONS = True
     INSTADL_API = ""
     IMDB_TEMPLATE = ""
     IMAGES = []

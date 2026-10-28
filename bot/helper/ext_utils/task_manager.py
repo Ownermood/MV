@@ -21,7 +21,7 @@ from ..telegram_helper.tg_utils import check_botpm, verify_token
 from .bot_utils import get_telegraph_list, sync_to_async, safe_int
 from .files_utils import get_base_name, check_storage_threshold
 from .links_utils import is_gdrive_id
-from .status_utils import get_readable_time, get_readable_file_size, get_specific_tasks
+from .status_utils import get_readable_time, get_readable_file_size
 
 
 async def stop_duplicate_check(listener):
@@ -178,7 +178,6 @@ async def limit_checker(listener, yt_playlist=0):
     size = listener.size
 
     async def recurr_limits(limits):
-        nonlocal yt_playlist, size
         limit_exceeded = ""
         for condition, attr, name in limits:
             if condition and (limit := getattr(Config, attr, 0)):

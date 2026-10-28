@@ -1,4 +1,5 @@
 from asyncio import ensure_future, gather, sleep
+from html import escape
 from logging import getLogger
 from os import path as ospath, walk
 from re import match as re_match, sub as re_sub
@@ -35,6 +36,7 @@ from ...ext_utils.files_utils import get_base_name, is_archive
 from ...ext_utils.status_utils import get_readable_file_size, get_readable_time
 
 from ...ext_utils.media_utils import get_md5_hash, get_media_info
+from ...telegram_helper.emoji import e
 from ...telegram_helper.message_utils import delete_message
 from ...telegram_helper.tg_copy import call_with_flood_retry as _call_with_flood_retry
 from ...ext_utils.hyperul_utils import HypertgUpload
@@ -477,13 +479,23 @@ class TelegramUploader:
             return
         upload_tasks = []
         seq_idx = 0
-        for dirpath, _, files in natsorted(await sync_to_async(walk, self._path)):
+        tree = natsorted(await sync_to_async(walk, self._path))
+        # one section per folder that has files, in A, B, C… order
+        sectioned = Config.LEECH_SECTIONS and sum(
+            1 for d, _, f in tree if f and not d.endswith(("/yt-dlp-thumb", "_mltbss"))
+        ) > 1
+        section = None
+        for dirpath, _, files in tree:
             if dirpath.strip().endswith("/yt-dlp-thumb"):
                 continue
             if dirpath.strip().endswith("_mltbss"):
                 await self._send_screenshots(dirpath, files)
                 await rmtree(dirpath, ignore_errors=True)
                 continue
+            if sectioned and files:
+                if section:
+                    await self._end_section(section)
+                section = await self._start_section(dirpath, len(files))
             for file_ in natsorted(files):
                 self._error = ""
                 f_path = ospath.join(dirpath, file_)
@@ -527,6 +539,8 @@ class TelegramUploader:
                         )
                     )
                     upload_tasks.append(task)
+                    if section:
+                        section["tasks"].append(task)
                     if not Config.USE_HYPER:
                         await task
                     seq_idx += 1
@@ -538,21 +552,15 @@ class TelegramUploader:
                     self._corrupted += 1
                     if self._listener.is_cancelled:
                         return
+        if section and not self._listener.is_cancelled:
+            await self._end_section(section)
         if upload_tasks:
             results = await gather(*upload_tasks, return_exceptions=True)
             for r in results:
                 if isinstance(r, Exception):
                     LOGGER.error(f"Upload task error: {r}")
             await sleep(1)
-        for key, value in list(self._media_dict.items()):
-            for subkey, msgs in list(value.items()):
-                if len(msgs) > 1:
-                    try:
-                        await self._send_media_group(subkey, key, msgs)
-                    except Exception as e:
-                        LOGGER.info(
-                            f"While sending media group at the end of task. Error: {e}"
-                        )
+        await self._flush_media_groups()
         if self._upload_seq:
             src_chat = self._listener.message.chat
             await self._sequence_copies(src_chat)
@@ -576,6 +584,56 @@ class TelegramUploader:
             None, self._msgs_dict, self._total_files, self._corrupted
         )
         return
+
+    async def _flush_media_groups(self):
+        for key, value in list(self._media_dict.items()):
+            for subkey, msgs in list(value.items()):
+                if len(msgs) > 1:
+                    try:
+                        await self._send_media_group(subkey, key, msgs)
+                    except Exception as e:
+                        LOGGER.info(f"While sending media group. Error: {e}")
+
+    def _section_chat(self):
+        if self._listener.up_dest:
+            return self._listener.up_dest, self._listener.chat_thread_id
+        return self._listener.message.chat.id, None
+
+    async def _section_note(self, text):
+        chat_id, thread_id = self._section_chat()
+        try:
+            await _call_with_flood_retry(
+                TgClient.bot.send_message,
+                chat_id=chat_id,
+                text=text,
+                message_thread_id=thread_id,
+                disable_notification=True,
+            )
+        except Exception as err:
+            LOGGER.warning(f"Section message not sent: {err}")
+
+    async def _start_section(self, dirpath, count):
+        name = ospath.relpath(dirpath, self._path)
+        if name == ".":
+            name = self._listener.name
+        self._section_no = getattr(self, "_section_no", 0) + 1
+        await self._section_note(
+            f"{e('folder')} <b>Section {self._section_no}: {escape(name)}</b>\n"
+            f"<blockquote>Uploading {count} file(s)…</blockquote>"
+        )
+        return {"name": name, "no": self._section_no, "count": count, "tasks": []}
+
+    async def _end_section(self, section):
+        # wait for this folder's uploads so the next section never mixes in
+        results = await gather(*section["tasks"], return_exceptions=True)
+        await self._flush_media_groups()
+        if self._listener.is_cancelled:
+            return
+        done = sum(1 for r in results if r and not isinstance(r, Exception))
+        await self._section_note(
+            f"<blockquote>{e('done')} <b>Section {section['no']}: {escape(section['name'])}</b> uploaded\n"
+            f"{done}/{section['count']} file(s)</blockquote>"
+        )
 
     async def _upload_file(
         self, cap_mono, o_path, file_, seq_idx, force_document=False, user_session=False
