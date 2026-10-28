@@ -1,5 +1,5 @@
 from html import escape
-from pyrogram.enums import ButtonStyle
+from pyrogram.enums import ButtonStyle, ChatMemberStatus
 from time import monotonic, time
 from uuid import uuid4
 from re import match
@@ -19,7 +19,14 @@ from ..helper.languages import Language
 from ..helper.telegram_helper.bot_commands import BotCommands
 from ..helper.telegram_helper.button_build import ButtonMaker
 from ..helper.telegram_helper.emoji import e, icon, label
-from ..helper.telegram_helper.force_join import join_markup, join_text, missing_chats
+from ..helper.telegram_helper.force_join import (
+    forget_user,
+    fsub_chats,
+    join_markup,
+    join_text,
+    missing_chats,
+    pending_prompts,
+)
 from ..helper.telegram_helper.filters import CustomFilters
 from ..helper.telegram_helper.message_utils import (
     delete_message,
@@ -171,7 +178,9 @@ Type <b>/</b> in the chat to see the command menu.""",
 async def force_join_gate(_, message):
     uid = (message.from_user or message.sender_chat).id
     if missing := await missing_chats(uid):
-        await send_message(message, join_text(missing), join_markup(uid, missing))
+        sent = await send_message(message, join_text(missing), join_markup(uid, missing))
+        if not isinstance(sent, str):
+            pending_prompts[uid] = sent
 
 
 @new_task
@@ -185,8 +194,37 @@ async def force_join_cb(_, query):
         await query.answer(f"Not joined yet: {names}"[:190], show_alert=True)
         return
     await query.answer("Thanks for joining!")
+    pending_prompts.pop(uid, None)
     text, markup = start_home(query.from_user)
     await edit_message(query.message, text, markup)
+
+
+JOINED_STATUSES = {
+    ChatMemberStatus.MEMBER,
+    ChatMemberStatus.ADMINISTRATOR,
+    ChatMemberStatus.OWNER,
+    ChatMemberStatus.RESTRICTED,
+}
+
+
+@new_task
+async def force_join_member_update(_, update):
+    # auto verify: Telegram sends these for chats where the bot is admin
+    new = update.new_chat_member
+    if not new or not new.user or new.status not in JOINED_STATUSES:
+        return
+    if str(update.chat.id) not in {c["id"] for c in fsub_chats()}:
+        return
+    uid = new.user.id
+    forget_user(uid)
+    if (prompt := pending_prompts.get(uid)) is None:
+        return
+    if missing := await missing_chats(uid, use_cache=False):
+        await edit_message(prompt, join_text(missing), join_markup(uid, missing))
+        return
+    pending_prompts.pop(uid, None)
+    text, markup = start_home(new.user)
+    await edit_message(prompt, text, markup)
 
 
 @new_task

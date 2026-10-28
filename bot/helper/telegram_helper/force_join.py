@@ -5,6 +5,7 @@ from asyncio import gather
 from html import escape
 from time import time
 
+from pyrogram.enums import ButtonStyle
 from pyrogram.errors import RPCError, UserNotParticipant
 from pyrogram.filters import create
 
@@ -17,10 +18,16 @@ from .tg_utils import chat_info
 
 JOINED_TTL = 600
 _joined_until = {}
+# uid -> join prompt message, edited to the welcome menu once the user joins
+pending_prompts = {}
 
 
 def clear_join_cache():
     _joined_until.clear()
+
+
+def forget_user(user_id):
+    _joined_until.pop(user_id, None)
 
 
 def fsub_chats():
@@ -81,7 +88,7 @@ def join_markup(user_id, missing):
     buttons = ButtonMaker()
     for name, link in missing:
         if link:
-            buttons.url_button(label("add", name), link, icon=icon("add"))
+            buttons.url_button(label("add", name), link, style=ButtonStyle.SUCCESS, icon=icon("add"))
     buttons.data_button(label("done", "I've Joined"), f"fsub {user_id}", "footer", icon=icon("done"))
     return buttons.build_menu(1)
 
@@ -91,7 +98,7 @@ def join_text(missing):
     return (
         f"{e('warn')} <b>Join required</b>\n\n"
         f"To use <b>Mirrorleach Villanbot</b>, please join:\n{rows}\n\n"
-        f"Then tap <b>I've Joined</b>."
+        f"You are verified automatically after joining, or tap <b>I've Joined</b>."
     )
 
 

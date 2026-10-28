@@ -2,10 +2,9 @@ import sys, types, importlib.util, asyncio
 REPO = sys.argv[1]
 def mod(name, **attrs):
     m = types.ModuleType(name); m.__path__ = []; m.__dict__.update(attrs); sys.modules[name] = m; return m
-class UserNotParticipant(Exception): pass
-class RPCError(Exception):
-    MESSAGE = "CHAT_ADMIN_REQUIRED"
+from pyrogram.errors import RPCError, UserNotParticipant  # real classes
 class Cfg: FORCE_SUB_CHATS = []; FORCE_SUB_IDS = ""; PREMIUM_EMOJI = False
+STYLES = []
 members = {"-1001": {5}, "-1002": set()}
 calls = []
 class Chat:
@@ -20,13 +19,13 @@ class Sudo:
     async def __call__(self, _, update): return update.from_user.id == 1
 class BM:
     def __init__(s): s.rows = []
-    def url_button(s, k, d, position=None, style=None, icon=None): s.rows.append((k, d))
+    def url_button(s, k, d, position=None, style=None, icon=None): s.rows.append((k, d)); STYLES.append(style)
     def data_button(s, k, d, position=None, style=None, icon=None): s.rows.append((k, d))
     def build_menu(s, *a, **k): return s.rows
 mod("bot", LOGGER=types.SimpleNamespace(warning=lambda *a: None)); mod("bot.core"); mod("bot.core.config_manager", Config=Cfg)
 mod("bot.helper"); mod("bot.helper.telegram_helper")
-mod("pyrogram.errors", RPCError=RPCError, UserNotParticipant=UserNotParticipant)
-mod("pyrogram.filters", create=lambda f: f)
+import pyrogram.filters as _pf
+_pf.create = lambda f: f
 mod("bot.helper.telegram_helper.button_build", ButtonMaker=BM)
 mod("bot.helper.telegram_helper.filters", CustomFilters=types.SimpleNamespace(sudo=Sudo()))
 mod("bot.helper.telegram_helper.tg_utils", chat_info=chat_info)
@@ -57,6 +56,8 @@ async def main():
     fj.clear_join_cache()
     markup = fj.join_markup(9, [("📢 Updates", "https://t.me/mainch"), ("NoLink", None)])
     t(f"join buttons + I've Joined {markup}", markup == [("➕ 📢 Updates", "https://t.me/mainch"), ("✅ I've Joined", "fsub 9")])
+    import pyrogram.enums as pe
+    t(f"join buttons are green {STYLES}", STYLES == [pe.ButtonStyle.SUCCESS])
     txt = fj.join_text([("A&B <x>", "l")])
     t("join text escapes chat names", "A&amp;B &lt;x&gt;" in txt)
 asyncio.run(main())

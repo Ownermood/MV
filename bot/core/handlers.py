@@ -1,7 +1,12 @@
 # ruff: noqa: F403, F405
 
 from pyrogram.filters import command, regex
-from pyrogram.handlers import CallbackQueryHandler, EditedMessageHandler, MessageHandler
+from pyrogram.handlers import (
+    CallbackQueryHandler,
+    ChatMemberUpdatedHandler,
+    EditedMessageHandler,
+    MessageHandler,
+)
 from pyrogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeDefault
 
 from .. import LOGGER, sudo_users, user_data
@@ -72,6 +77,7 @@ async def add_handlers():
     TgClient.bot.add_handler(
         CallbackQueryHandler(force_join_cb, filters=regex("^fsub "))
     )
+    TgClient.bot.add_handler(ChatMemberUpdatedHandler(force_join_member_update))
     TgClient.bot.add_handler(
         MessageHandler(
             send_bot_settings,

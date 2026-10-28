@@ -41,6 +41,7 @@ CHECKS = [
     ("/start + guide pages", "check_start_menu.py", [REPO], None),
     ("admin panel", "check_admin_panel.py", [REPO], None),
     ("force join", "check_force_join.py", [REPO], None),
+    ("force join auto-verify", "check_auto_verify.py", [REPO], None),
 ]
 
 failed = []
