@@ -40,6 +40,7 @@ CHECKS = [
     ("broadcast loop", "check_broadcast.py", [REPO], None),
     ("/start + guide pages", "check_start_menu.py", [REPO], None),
     ("admin panel", "check_admin_panel.py", [REPO], None),
+    ("force join", "check_force_join.py", [REPO], None),
 ]
 
 failed = []

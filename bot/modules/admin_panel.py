@@ -1,9 +1,9 @@
-# /admin: red control panel for the welcome screen, broadcast and premium emoji.
+# /admin: control panel for the welcome screen, force join, broadcast and premium emoji.
 from asyncio import Event, TimeoutError as AsyncTimeout, wait_for
 from html import escape
 from time import time
 
-from pyrogram.enums import ButtonStyle
+from pyrogram.enums import ChatMemberStatus
 from pyrogram.filters import private, user
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
@@ -16,22 +16,25 @@ from ..helper.ext_utils.db_handler import database
 from ..helper.ext_utils.status_utils import get_readable_time
 from ..helper.telegram_helper.button_build import ButtonMaker, valid_url
 from ..helper.telegram_helper.emoji import EMOJI, e, icon, label
+from ..helper.telegram_helper.force_join import clear_join_cache, fsub_chats
 from ..helper.telegram_helper.message_utils import (
     delete_message,
     edit_message,
     send_message,
 )
 from ..helper.telegram_helper.prompt import STOP, PromptUnreachable, ask_in_pm
+from ..helper.telegram_helper.tg_utils import chat_info
 from .broadcast import run_broadcast
 from .services import start_home, start_photo
 
-RED = ButtonStyle.DANGER
 LINE = "━━━━━━━━━━━━━━━━━━"
 pending_broadcast = {}
 
 
 async def _save(key, value):
     Config.set(key, value)
+    if key.startswith("FORCE_SUB"):
+        clear_join_cache()
     if Config.DATABASE_URL:
         await database.update_config({key: value})
 
@@ -41,9 +44,7 @@ def _cb(uid, action, arg=""):
 
 
 def _btn(buttons, uid, name, text, action, arg="", position=None):
-    buttons.data_button(
-        label(name, text), _cb(uid, action, arg), position, RED, icon(name)
-    )
+    buttons.data_button(label(name, text), _cb(uid, action, arg), position, icon=icon(name))
 
 
 def _onoff(flag):
@@ -94,12 +95,14 @@ async def _home(uid):
 {e("chart")} <b>Running tasks:</b> <code>{len(task_dict)}</code>
 {e("clock")} <b>Uptime:</b> <code>{get_readable_time(time() - bot_start_time)}</code>
 {e("star")} <b>Premium emoji:</b> {_onoff(Config.PREMIUM_EMOJI)}
+{e("key")} <b>Force join chats:</b> <code>{len(fsub_chats())}</code>
 {LINE}
 <i>Changes apply instantly and are saved.</i>"""
     b = ButtonMaker()
     _btn(b, uid, "wave", "Welcome Text", "text")
     _btn(b, uid, "image", "Welcome Image", "img")
     _btn(b, uid, "link", "Start Buttons", "btns")
+    _btn(b, uid, "key", "Force Join", "fj")
     _btn(b, uid, "mail", "Broadcast", "bc")
     _btn(b, uid, "gem", "Premium Emoji", "prem")
     _btn(b, uid, "search", "Preview /start", "preview")
@@ -204,12 +207,34 @@ Turning it on sends you a test message first; if Telegram rejects it, it stays o
     return text, b.build_menu(1)
 
 
+async def _fj_page(uid, note=""):
+    chats = fsub_chats()
+    rows = "\n".join(
+        f"{i}. <b>{escape(c['name'] or '(chat title)')}</b> — <code>{escape(c['id'])}</code>\n    {escape(c['link'] or '(auto link)')}"
+        for i, c in enumerate(chats, 1)
+    ) or "<i>None — everyone can use the bot.</i>"
+    text = f"""{e("key")} <b>Force Join</b>
+{LINE}
+Users must join these before they can use any command. Owner and sudo are never blocked.
+{e("warn")} Make the bot an <b>admin</b> in each channel (a member is enough in groups), otherwise it cannot check members and will not block anyone.
+
+<b>Chats:</b>
+{rows}{note}"""
+    b = ButtonMaker()
+    for i, c in enumerate(chats, 1):
+        _btn(b, uid, "remove", f"Remove {i}. {(c['name'] or c['id'])[:20]}", "fj_rm", i - 1)
+    _btn(b, uid, "add", "Add Channel / Group", "fj_add", position="f_body")
+    _back(b, uid)
+    return text, b.build_menu(1)
+
+
 PAGES = {
     "home": lambda uid, note="": _home(uid),
     "text": _text_page,
     "img": _img_page,
     "btns": _btns_page,
     "bc": _bc_page,
+    "fj": _fj_page,
     "prem": _prem_page,
 }
 
@@ -331,6 +356,59 @@ async def admin_panel_cb(_, query):
     if action == "tog_src":
         await _save("START_SOURCE_BUTTON", not Config.START_SOURCE_BUTTON)
         return await _show(msg, uid, "btns")
+    # force join
+    if action == "fj_add":
+        await edit_message(msg, f"{e('key')} <i>Waiting for the channel/group in private chat…</i>")
+        sent = await send_message(
+            uid,
+            f"{e('key')} Send the channel/group ID (<code>-100…</code>) or @username, "
+            "or forward any message from that channel. Add the bot there as admin first.",
+        )
+        if isinstance(sent, str):
+            return await _show(msg, uid, "fj", _note(False, "Start the bot in private chat first, then try again."))
+        reply = await _wait_pm(uid)
+        if reply is None:
+            return await _show(msg, uid, "fj", _note(False, "Timed out."))
+        fwd = getattr(reply, "forward_from_chat", None) or getattr(
+            getattr(reply, "forward_origin", None), "chat", None
+        )
+        target = str(fwd.id) if fwd else (reply.text or "").strip()
+        chat = await chat_info(target)
+        if chat is None:
+            return await _show(msg, uid, "fj", _note(False, "I can't open that chat. Add the bot to it (as admin) and use the -100… ID or @username."))
+        warn = ""
+        try:
+            me = await chat.get_member("me")
+            if me.status not in (ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER):
+                warn = " The bot is not an admin there yet — make it admin or it can't check members."
+        except Exception:
+            warn = " Could not confirm the bot's admin rights there — make it admin."
+        name, err = await _ask(uid, f"Send the button name for <b>{escape(chat.title or '')}</b>, or send <code>skip</code> to use the chat title.")
+        if err:
+            return await _show(msg, uid, "fj", _note(False, err))
+        name = "" if not name or str(name).strip().lower() == "skip" else str(name).strip()[:40]
+        auto_link = f"https://t.me/{chat.username}" if chat.username else (chat.invite_link or "")
+        link, err = await _ask(uid, f"Send the join link (https://t.me/…){f', or <code>skip</code> to use {escape(auto_link)}' if auto_link else ''}.")
+        link = str(link or "").strip()
+        if link.lower() == "skip" or (not link and auto_link):
+            link = auto_link
+        if link.startswith("t.me/"):
+            link = f"https://{link}"
+        if not valid_url(link):
+            return await _show(msg, uid, "fj", _note(False, err or "A valid join link is needed (private chats have no automatic link)."))
+        chats = [c for c in (Config.FORCE_SUB_CHATS if isinstance(Config.FORCE_SUB_CHATS, list) else []) if isinstance(c, dict) and str(c.get("id")) != str(chat.id)]
+        chats.append({"id": str(chat.id), "name": name or chat.title or "Join", "link": link})
+        await _save("FORCE_SUB_CHATS", chats)
+        return await _show(msg, uid, "fj", _note(not warn, f"Added {escape(chat.title or str(chat.id))}.{warn}"))
+    if action == "fj_rm":
+        chats = fsub_chats()
+        if arg.isdigit() and int(arg) < len(chats):
+            gone = chats.pop(int(arg))
+            await _save("FORCE_SUB_CHATS", [c for c in chats if c["id"] not in str(Config.FORCE_SUB_IDS or "").split()])
+            if gone["id"] in str(Config.FORCE_SUB_IDS or "").split():
+                await _save("FORCE_SUB_IDS", " ".join(i for i in str(Config.FORCE_SUB_IDS).split() if i != gone["id"]))
+            return await _show(msg, uid, "fj", _note(True, "Removed."))
+        return await _show(msg, uid, "fj")
     # broadcast
     if action == "bc_new":
         if not Config.DATABASE_URL:

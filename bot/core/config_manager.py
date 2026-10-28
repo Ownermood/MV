@@ -52,6 +52,7 @@ class Config:
     FILELION_API = ""
     MEDIA_STORE = True
     FORCE_SUB_IDS = ""
+    FORCE_SUB_CHATS = []
     GOFILE_API = ""
     GOFILE_FOLDER_ID = ""
     GOFILE_AUTO_CREATE_FOLDER = False
@@ -71,7 +72,7 @@ class Config:
     START_IMAGE = ""
     START_GUIDE = True
     START_SOURCE_BUTTON = False
-    PREMIUM_EMOJI = False
+    PREMIUM_EMOJI = True
     INSTADL_API = ""
     IMDB_TEMPLATE = ""
     IMAGES = []

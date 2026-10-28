@@ -8,6 +8,7 @@ from ..core.config_manager import Config
 from ..helper.ext_utils.help_messages import BOT_COMMANDS
 from ..helper.telegram_helper.bot_commands import BotCommands
 from ..helper.telegram_helper.filters import CustomFilters
+from ..helper.telegram_helper.force_join import not_joined
 from ..modules import *
 from .tg_client import TgClient
 
@@ -60,6 +61,15 @@ async def add_handlers():
             black_listed,
             filters=regex(r"^/") & CustomFilters.authorized & CustomFilters.blacklisted,
         )
+    )
+    TgClient.bot.add_handler(
+        MessageHandler(
+            force_join_gate,
+            filters=regex(r"^/") & CustomFilters.authorized & not_joined,
+        )
+    )
+    TgClient.bot.add_handler(
+        CallbackQueryHandler(force_join_cb, filters=regex("^fsub "))
     )
     TgClient.bot.add_handler(
         MessageHandler(

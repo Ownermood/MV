@@ -5,7 +5,7 @@ def mod(name, **attrs):
     m = types.ModuleType(name); m.__path__ = []; m.__dict__.update(attrs); sys.modules[name] = m; return m
 class Cfg:
     DATABASE_URL = "mongodb://x"; START_TEXT = ""; START_IMAGE = ""; START_LINKS = {}; START_GUIDE = True
-    START_SOURCE_BUTTON = False; PREMIUM_EMOJI = False; USE_IMAGES = False; IMAGES = []
+    START_SOURCE_BUTTON = False; PREMIUM_EMOJI = False; USE_IMAGES = False; IMAGES = []; FORCE_SUB_CHATS = []; FORCE_SUB_IDS = ""
     @classmethod
     def set(cls, k, v): setattr(cls, k, v)
 saved = {}
@@ -52,12 +52,24 @@ mod("bot.helper.telegram_helper.button_build", ButtonMaker=BM, valid_url=lambda 
 mod("bot.helper.telegram_helper.message_utils", send_message=send_message, edit_message=edit_message, delete_message=delete_message)
 mod("bot.helper.telegram_helper.prompt", STOP="STOP", PromptUnreachable=type("PU", (Exception,), {}), ask_in_pm=ask_in_pm)
 mod("bot.modules"); mod("bot.modules.broadcast", run_broadcast=run_broadcast)
+class CMS: ADMINISTRATOR = "admin"; OWNER = "owner"; MEMBER = "member"
+import pyrogram.enums as _en
+_en.ChatMemberStatus = CMS
+class FChat:
+    def __init__(s, cid, title, username=None, admin=True): s.id, s.title, s.username, s.invite_link, s.admin = cid, title, username, None, admin
+    async def get_member(s, who): return types.SimpleNamespace(status=CMS.ADMINISTRATOR if s.admin else CMS.MEMBER)
+fchats = {"-1001": FChat(-1001, "Main Channel", "mainch"), "@grp": FChat(-1002, "Private Grp", None, admin=False)}
+async def chat_info(cid): return fchats.get(str(cid))
+cleared = []
+def fsub_chats():
+    return [{"id": str(c["id"]), "name": c.get("name", ""), "link": c.get("link", "")} for c in Cfg.FORCE_SUB_CHATS] + [{"id": i, "name": "", "link": ""} for i in Cfg.FORCE_SUB_IDS.split()]
+mod("bot.helper.telegram_helper.force_join", fsub_chats=fsub_chats, clear_join_cache=lambda: cleared.append(1))
+mod("bot.helper.telegram_helper.tg_utils", chat_info=chat_info)
 mod("bot.modules.services", start_home=lambda u: ("HOME", []), start_photo=lambda: "IMAGES")
 for name, path in (("bot.helper.telegram_helper.emoji", "bot/helper/telegram_helper/emoji.py"), ("bot.modules.admin_panel", "bot/modules/admin_panel.py")):
     spec = importlib.util.spec_from_file_location(name, f"{REPO}/{path}")
     m = importlib.util.module_from_spec(spec); sys.modules[name] = m; spec.loader.exec_module(m)
 ap = sys.modules["bot.modules.admin_panel"]
-ap.RED = "RED"
 async def wait_pm(uid, timeout=120): return pm_queue.pop(0) if pm_queue else None
 ap._wait_pm = wait_pm
 ap.Message = Msg
@@ -83,9 +95,9 @@ async def main():
         q = Q(data, m, uid); await ap.admin_panel_cb(None, q); return q
     for prem in (False, True):
         Cfg.PREMIUM_EMOJI = prem
-        for page in ("home", "text", "img", "btns", "bc", "prem"):
+        for page in ("home", "text", "img", "btns", "bc", "prem", "fj"):
             await click(f"adm 7 {page}")
-            t(f"page {page} valid (premium={prem})", valid(m.text, m.markup) and all(r[2] == "RED" for r in m.markup))
+            t(f"page {page} valid (premium={prem})", valid(m.text, m.markup) and all(r[2] is None for r in m.markup))
     Cfg.PREMIUM_EMOJI = False
     q = await click("adm 7 home", uid=8); t("other admin blocked", q.alerts and "another admin" in q.alerts[0])
     answers.append(Str("Welcome to my bot")); await click("adm 7 text_set")
@@ -113,6 +125,16 @@ async def main():
     t("broadcast asks confirmation", "Confirm broadcast" in m.text and not bc_calls)
     await click("adm 7 bc_go 1"); t("broadcast sent silently", bc_calls == [(bmsg, True)] and "bc9" in m.text)
     await click("adm 7 bc_go 0"); t("no double send", len(bc_calls) == 1 and "Nothing to send" in m.text)
+    fwd = Msg(); fwd.forward_origin = types.SimpleNamespace(chat=types.SimpleNamespace(id="-1001")); fwd.forward_from_chat = None
+    pm_queue.append(fwd); answers.extend([Str("skip"), Str("skip")]); await click("adm 7 fj_add")
+    t(f"force join from forwarded msg, auto name+link", saved.get("FORCE_SUB_CHATS") == [{"id": "-1001", "name": "Main Channel", "link": "https://t.me/mainch"}] and cleared)
+    pm_queue.append(Msg(text="@grp")); answers.extend([Str("Our Group"), Str("skip")]); await click("adm 7 fj_add")
+    t("private chat without link refused", len(saved["FORCE_SUB_CHATS"]) == 1 and "valid join link" in m.text)
+    pm_queue.append(Msg(text="@grp")); answers.extend([Str("Our Group"), Str("t.me/+secret")]); await click("adm 7 fj_add")
+    t("private chat added with link + not-admin warning", saved["FORCE_SUB_CHATS"][-1] == {"id": "-1002", "name": "Our Group", "link": "https://t.me/+secret"} and "not an admin" in m.text)
+    pm_queue.append(Msg(text="-999")); await click("adm 7 fj_add"); t("unknown chat refused", "can't open" in m.text and len(saved["FORCE_SUB_CHATS"]) == 2)
+    await click("adm 7 fj"); t("force join page valid", valid(m.text, m.markup) and "Our Group" in m.text)
+    await click("adm 7 fj_rm 0"); t("force join chat removed", [c["id"] for c in saved["FORCE_SUB_CHATS"]] == ["-1002"])
     await click("adm 7 close"); t("close deletes panel", getattr(m, "deleted", False))
 asyncio.run(main())
 print("ALL PASS" if ok else "SOME FAILED")

@@ -16,7 +16,8 @@ from ...core.config_manager import Config
 from ..mirror_leech_utils.gdrive_utils.search import GoogleDriveSearch
 from ..telegram_helper.filters import CustomFilters
 from ..telegram_helper.button_build import ButtonMaker
-from ..telegram_helper.tg_utils import check_botpm, forcesub, verify_token
+from ..telegram_helper.force_join import fsub_chats, missing_chats
+from ..telegram_helper.tg_utils import check_botpm, verify_token
 from .bot_utils import get_telegraph_list, sync_to_async, safe_int
 from .files_utils import get_base_name, check_storage_threshold
 from .links_utils import is_gdrive_id
@@ -246,6 +247,14 @@ async def user_interval_check(user_id):
     return None
 
 
+async def _fsub_check(message, button):
+    missing = await missing_chats(message.from_user.id)
+    for name, link in missing:
+        if link:
+            button.url_button(f"Join {name}", link, "footer")
+    return ("┠ Channel(s) pending to be joined, Join Now!" if missing else ""), button
+
+
 async def pre_task_check(message):
     LOGGER.info("Running Pre Task Checks ...")
     msg = []
@@ -276,8 +285,8 @@ async def pre_task_check(message):
     button = ButtonMaker()
     checks = []
     if message.chat.type != message.chat.type.BOT:
-        if Config.FORCE_SUB_IDS:
-            checks.append(forcesub(message, Config.FORCE_SUB_IDS, button))
+        if fsub_chats():
+            checks.append(_fsub_check(message, button))
         if Config.BOT_PM or user_dict.get("BOT_PM"):
             checks.append(check_botpm(message, button))
     checks.append(verify_token(user_id, button))

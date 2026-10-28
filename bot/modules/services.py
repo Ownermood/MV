@@ -19,6 +19,7 @@ from ..helper.languages import Language
 from ..helper.telegram_helper.bot_commands import BotCommands
 from ..helper.telegram_helper.button_build import ButtonMaker
 from ..helper.telegram_helper.emoji import e, icon, label
+from ..helper.telegram_helper.force_join import join_markup, join_text, missing_chats
 from ..helper.telegram_helper.filters import CustomFilters
 from ..helper.telegram_helper.message_utils import (
     delete_message,
@@ -75,9 +76,9 @@ def start_photo():
 def _start_links(buttons, lang):
     links = Config.START_LINKS if isinstance(Config.START_LINKS, dict) else {}
     for label_, url in links.items():
-        buttons.url_button(str(label_), str(url), "f_body", ButtonStyle.PRIMARY)
+        buttons.url_button(str(label_), str(url), "f_body")
     if not links:
-        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL, "f_body", ButtonStyle.PRIMARY)
+        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL, "f_body")
     if Config.START_SOURCE_BUTTON:
         buttons.url_button(
             label("folder", "Source Code"), "https://github.com/Ownermood/MV", "footer", icon=icon("folder")
@@ -164,6 +165,28 @@ Send {_cmd("Help")} for the full list with every option.
 Type <b>/</b> in the chat to see the command menu.""",
     }
     return pages.get(page, pages["cmds"])
+
+
+@new_task
+async def force_join_gate(_, message):
+    uid = (message.from_user or message.sender_chat).id
+    if missing := await missing_chats(uid):
+        await send_message(message, join_text(missing), join_markup(uid, missing))
+
+
+@new_task
+async def force_join_cb(_, query):
+    uid = int(query.data.split()[1])
+    if uid != query.from_user.id:
+        await query.answer("Send /start yourself to use this menu.", show_alert=True)
+        return
+    if missing := await missing_chats(uid, use_cache=False):
+        names = ", ".join(name for name, _ in missing)
+        await query.answer(f"Not joined yet: {names}"[:190], show_alert=True)
+        return
+    await query.answer("Thanks for joining!")
+    text, markup = start_home(query.from_user)
+    await edit_message(query.message, text, markup)
 
 
 @new_task

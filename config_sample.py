@@ -76,7 +76,8 @@ START_TEXT = ""  # custom welcome text under the greeting (HTML); empty = built-
 START_IMAGE = ""  # welcome photo: URL or Telegram file_id; empty = IMAGES / none
 START_GUIDE = True  # show the guide buttons under /start
 START_SOURCE_BUTTON = False  # show a Source Code button under /start
-PREMIUM_EMOJI = False  # premium emoji in the UI; needs Telegram Premium on the bot owner's account
+PREMIUM_EMOJI = True  # premium emoji in the UI; needs Telegram Premium on the bot owner's account
+FORCE_SUB_CHATS = []  # set from /admin -> Force Join: [{"id": "-100...", "name": "Main Channel", "link": "https://t.me/..."}]
 
 # Task Limits
 DIRECT_LIMIT = 0
