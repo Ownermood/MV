@@ -233,6 +233,17 @@ class TelegramUploader:
         ]
         for i in range(0, len(inputs), 10):
             batch = inputs[i : i + 10]
+            if self._pm_is_dest:
+                # files go to the DM: keep the screenshots there, not in the group
+                self._sent_msg = (
+                    await _call_with_flood_retry(
+                        TgClient.bot.send_media_group,
+                        chat_id=self._listener.user_id,
+                        media=batch,
+                        disable_notification=True,
+                    )
+                )[-1]
+                continue
             if Config.BOT_PM:
                 await _call_with_flood_retry(
                     TgClient.bot.send_media_group,
@@ -309,9 +320,13 @@ class TelegramUploader:
                 self._msg_to_seq[(new_msg.chat.id, new_msg.id)] = seq_idx
         self._sent_msg = msgs_list[-1]
 
+    @property
+    def _pm_is_dest(self):
+        return self._listener.up_dest == self._listener.user_id
+
     async def _copy_media(self):
         try:
-            if self._bot_pm:
+            if self._bot_pm and self._sent_msg.chat.id != self._listener.user_id:
                 await _call_with_flood_retry(
                     TgClient.bot.copy_message,
                     chat_id=self._listener.user_id,
@@ -386,7 +401,7 @@ class TelegramUploader:
                         f"Make sure bot has message delete permission: {e}"
                     )
                     continue
-            if self._bot_pm:
+            if self._bot_pm and copy_from_chat != self._listener.user_id:
                 try:
                     await _call_with_flood_retry(
                         TgClient.bot.copy_message,

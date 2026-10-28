@@ -604,6 +604,10 @@ class TaskConfig:
                 self.up_dest = await self.resolve_dump_dest(self.dump_dest)
                 if self.is_cancelled:
                     return
+            if not self.up_dest and self.bot_pm and self.is_super_chat:
+                # no log/dump chat: files go straight to the user's DM and the
+                # group only gets the status, so it stays clean
+                self.up_dest = self.user_id
             if self.up_dest:
                 if not isinstance(self.up_dest, int):
                     self.up_dest, self.chat_thread_id = parse_dest(self.up_dest)

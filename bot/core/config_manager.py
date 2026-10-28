@@ -21,7 +21,7 @@ class Config:
     HELPER_BOT_PROXIES = ""
     HELPER_USER_PROXIES = ""
     BOT_MAX_TASKS = 0
-    BOT_PM = False
+    BOT_PM = True
     CMD_SUFFIX = ""
     DEFAULT_LANG = "en"
     DATABASE_URL = ""

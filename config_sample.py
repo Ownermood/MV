@@ -140,7 +140,7 @@ LOGIN_PASS = ""
 ENABLE_TELEMETRY = False  # Opt-in: sends crash tracebacks + recent logs to telemetry.wzmlx.com (logs go to a public telegra.ph page)
 
 # Bot Settings
-BOT_PM = False
+BOT_PM = True
 SET_COMMANDS = True
 TIMEZONE = "Asia/Kolkata"
 
