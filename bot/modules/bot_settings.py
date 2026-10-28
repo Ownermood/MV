@@ -1082,21 +1082,29 @@ async def event_handler(client, query, pfunc, rfunc, document=False):
     handler = client.add_handler(
         MessageHandler(pfunc, filters=create(event_filter)), group=-1
     )
-    while handler_dict[chat_id]:
-        await sleep(0.5)
+    try:
+        while handler_dict[chat_id]:
+            await sleep(0.5)
 
-        if time() - start_time > 60:
-            handler_dict[chat_id] = False
-            await rfunc()
-        elif time() - update_time > 8 and handler_dict[chat_id]:
-            update_time = time()
-            msg = await client.get_messages(chat_id, query.message.id)
-            text = msg.text.split("\n")
-            text[-1] = (
-                f"┖ <b>Time Left :</b> <code>{round(60 - (time() - start_time), 2)} sec</code>"
-            )
-            await edit_message(msg, "\n".join(text), msg.reply_markup)
-    client.remove_handler(*handler)
+            if time() - start_time > 60:
+                handler_dict[chat_id] = False
+                await rfunc()
+            elif time() - update_time > 8 and handler_dict[chat_id]:
+                update_time = time()
+                msg = await client.get_messages(chat_id, query.message.id)
+                # the menu can be a photo (opened from /admin): its text is the caption
+                content = msg and (msg.text or msg.caption)
+                if not content:
+                    continue
+                text = (
+                    content.html if getattr(content, "entities", None) else str(content)
+                ).split("\n")
+                text[-1] = (
+                    f"┖ <b>Time Left :</b> <code>{round(60 - (time() - start_time), 2)} sec</code>"
+                )
+                await edit_message(msg, "\n".join(text), msg.reply_markup)
+    finally:
+        client.remove_handler(*handler)
 
 
 @new_task
