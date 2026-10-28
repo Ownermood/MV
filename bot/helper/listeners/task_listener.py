@@ -86,8 +86,15 @@ class TaskListener(TaskConfig):
             style=ButtonStyle.SUCCESS,
             icon=icon("mail"),
         )
+        user = self.message.from_user
+        # first name as a clickable mention; @username/ID only as a fallback
+        who = (
+            f"<a href='tg://user?id={user.id}'>{escape(user.first_name)}</a>"
+            if user and user.first_name
+            else self.tag
+        )
         await send_message(
-            self.message, f"{self.tag} {e('mail')} <b>{what}</b>", buttons.build_menu(1)
+            self.message, f"{who} {e('mail')} <b>{what}</b>", buttons.build_menu(1)
         )
 
     async def clean(self):
