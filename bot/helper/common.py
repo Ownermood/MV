@@ -33,6 +33,7 @@ from .ext_utils.bot_utils import (
     get_size_bytes,
     new_task,
     parse_dest,
+    safe_path_name,
     sync_to_async,
 )
 from .ext_utils.filter_utils import MessageFilter
@@ -323,6 +324,8 @@ class TaskConfig:
         return seats
 
     async def before_start(self):
+        if self.name:
+            self.name = safe_path_name(self.name)
         self.name_swap = (
             self.name_swap
             or self.user_dict.get("NAME_SWAP", False)

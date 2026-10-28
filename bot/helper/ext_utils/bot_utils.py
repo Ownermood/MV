@@ -409,6 +409,12 @@ def loop_thread(func):
     return wrapper
 
 
+def safe_path_name(name):
+    # User-given task/folder names must stay one path component inside the task dir
+    name = str(name).replace("/", "_").replace("\\", "_").strip()
+    return "" if name in (".", "..") else name
+
+
 def safe_int(value, default=0):
     try:
         return int(value)

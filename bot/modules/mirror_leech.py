@@ -17,6 +17,7 @@ from ..helper.ext_utils.bot_utils import (
     arg_parser,
     get_content_type,
     new_task,
+    safe_path_name,
     sync_to_async,
 )
 from ..helper.ext_utils.status_utils import (
@@ -225,7 +226,9 @@ class Mirror(TaskListener):
         self.thumbnail_layout = args["-tl"]
         self.as_doc = args["-doc"]
         self.as_med = args["-med"]
-        self.folder_name = f"/{args['-m']}".rstrip("/") if len(args["-m"]) > 0 else ""
+        self.folder_name = (
+            f"/{folder}" if (folder := safe_path_name(args["-m"])) else ""
+        )
         self.bot_trans = args["-bt"]
         self.user_trans = args["-ut"]
         self.is_alldebrid = args["-ad"]
