@@ -27,7 +27,7 @@ from ..helper.telegram_helper.tg_utils import chat_info
 from .broadcast import run_broadcast
 from .services import ensure_admin_menu, start_home, start_photo
 
-RED = ButtonStyle.DANGER
+GREEN = ButtonStyle.SUCCESS
 LINE = "━━━━━━━━━━━━━━━━━━"
 pending_broadcast = {}
 
@@ -44,8 +44,11 @@ def _cb(uid, action, arg=""):
     return f"adm {uid} {action} {arg}".strip()
 
 
-def _btn(buttons, uid, name, text, action, arg="", position=None):
-    buttons.data_button(label(name, text), _cb(uid, action, arg), position, RED, icon(name))
+def _btn(buttons, uid, name, text, action, arg="", position=None, on=False):
+    # no colours except green for things that are switched on
+    buttons.data_button(
+        label(name, text), _cb(uid, action, arg), position, GREEN if on else None, icon(name)
+    )
 
 
 def _onoff(flag):
@@ -100,13 +103,13 @@ async def _home(uid):
 {e("star")} <b>Premium emoji:</b> {_onoff(Config.PREMIUM_EMOJI)}</blockquote>
 <i>Tap a section. Changes apply instantly and are saved.</i>"""
     b = ButtonMaker()
-    _btn(b, uid, "globe", "Allowed Groups", "grp")
+    _btn(b, uid, "globe", "Allowed Groups", "grp", on=bool(_groups()))
     _btn(b, uid, "wave", "Welcome Text", "text")
     _btn(b, uid, "image", "Welcome Image", "img")
     _btn(b, uid, "link", "Start Buttons", "btns")
-    _btn(b, uid, "key", "Force Join", "fj")
+    _btn(b, uid, "key", "Force Join", "fj", on=bool(fsub_chats()))
     _btn(b, uid, "mail", "Broadcast", "bc")
-    _btn(b, uid, "gem", "Premium Emoji", "prem")
+    _btn(b, uid, "gem", "Premium Emoji", "prem", on=Config.PREMIUM_EMOJI)
     _btn(b, uid, "search", "Preview /start", "preview")
     _btn(b, uid, "gear", "Bot Settings", "bset")
     _btn(b, uid, "close", "Close", "close", position="footer")
@@ -169,14 +172,12 @@ async def _btns_page(uid, note=""):
 <b>Link buttons:</b>
 {rows}
 
-<b>Guide buttons</b> (Leech, Mirror, …): {_onoff(Config.START_GUIDE)}
-<b>Source Code button:</b> {_onoff(Config.START_SOURCE_BUTTON)}{note}"""
+<b>Guide buttons</b> (Leech, Mirror, …): {_onoff(Config.START_GUIDE)}{note}"""
     b = ButtonMaker()
     for i, k in enumerate(links, 1):
         _btn(b, uid, "remove", f"Remove {i}. {str(k)[:20]}", "link_rm", i - 1)
     _btn(b, uid, "add", "Add Link Button", "link_add", position="f_body")
-    _btn(b, uid, "list", f"Guide: {'ON' if Config.START_GUIDE else 'OFF'}", "tog_guide", position="f_body")
-    _btn(b, uid, "folder", f"Source: {'ON' if Config.START_SOURCE_BUTTON else 'OFF'}", "tog_src", position="f_body")
+    _btn(b, uid, "list", f"Guide: {'ON' if Config.START_GUIDE else 'OFF'}", "tog_guide", position="f_body", on=Config.START_GUIDE)
     _back(b, uid)
     return text, b.build_menu(1)
 
@@ -204,7 +205,7 @@ Turning it on sends you a test message first; if Telegram rejects it, it stays o
 
 <b>Status:</b> {_onoff(Config.PREMIUM_EMOJI)}{note}"""
     b = ButtonMaker()
-    _btn(b, uid, "on" if not Config.PREMIUM_EMOJI else "off", "Turn OFF" if Config.PREMIUM_EMOJI else "Turn ON (test)", "prem_tog")
+    _btn(b, uid, "on" if not Config.PREMIUM_EMOJI else "off", "Turn OFF" if Config.PREMIUM_EMOJI else "Turn ON (test)", "prem_tog", on=Config.PREMIUM_EMOJI)
     _back(b, uid)
     return text, b.build_menu(1)
 
@@ -389,9 +390,6 @@ async def admin_panel_cb(_, query):
         return await _show(msg, uid, "btns")
     if action == "tog_guide":
         await _save("START_GUIDE", not Config.START_GUIDE)
-        return await _show(msg, uid, "btns")
-    if action == "tog_src":
-        await _save("START_SOURCE_BUTTON", not Config.START_SOURCE_BUTTON)
         return await _show(msg, uid, "btns")
     # allowed groups
     if action == "grp_add":

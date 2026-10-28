@@ -1,5 +1,5 @@
 from html import escape
-from pyrogram.enums import ButtonStyle, ChatMemberStatus
+from pyrogram.enums import ButtonStyle, ChatMemberStatus, ChatType
 from time import monotonic, time
 from uuid import uuid4
 from re import match
@@ -8,7 +8,7 @@ from aiofiles import open as aiopen
 from cloudscraper import create_scraper
 from pyrogram.types import BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup
 
-from .. import LOGGER, user_data
+from .. import LOGGER, sudo_users, user_data
 from ..core.config_manager import Config
 from ..core.tg_client import TgClient
 from ..helper.ext_utils.bot_utils import new_task, update_user_ldata
@@ -83,16 +83,25 @@ def start_photo():
 def _start_links(buttons, lang):
     links = Config.START_LINKS if isinstance(Config.START_LINKS, dict) else {}
     for label_, url in links.items():
-        buttons.url_button(str(label_), str(url), "f_body")
+        buttons.url_button(str(label_), str(url), "f_body", ButtonStyle.SUCCESS)
     if not links:
-        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL, "f_body")
-    if Config.START_SOURCE_BUTTON:
-        buttons.url_button(
-            label("folder", "Source Code"), "https://github.com/Ownermood/MV", "footer", icon=icon("folder")
-        )
+        buttons.url_button(lang.START_BUTTON2, Config.AUTHOR_URL, "f_body", ButtonStyle.SUCCESS)
 
 
-def start_home(user):
+def view_only(user_id, chat):
+    """Private chat with someone who may only use the bot inside the allowed groups."""
+    if chat is None or chat.type != ChatType.PRIVATE:
+        return False
+    data = user_data.get(user_id, {})
+    return not (
+        user_id == Config.OWNER_ID
+        or user_id in sudo_users
+        or data.get("AUTH")
+        or data.get("SUDO")
+    )
+
+
+def start_home(user, view=False):
     lang = Language()
     buttons = ButtonMaker()
     if Config.START_GUIDE:
@@ -101,7 +110,15 @@ def start_home(user):
                 label(name, text), f"guide {user.id} {page}", icon=icon(name)
             )
     _start_links(buttons, lang)
-    return _greeting(user) + start_body(lang), buttons.build_menu(2)
+    text = _greeting(user) + start_body(lang)
+    if view:
+        text += (
+            f"\n{e('chat')} <b>Downloads work only in our bot group</b> — "
+            "open it with the green button below and send your commands there."
+        )
+        if Config.BOT_PM:
+            text += "\n<i>Your files will also be sent to you here.</i>"
+    return text, buttons.build_menu(2)
 
 
 def _guide_text(page):
@@ -195,7 +212,7 @@ async def force_join_cb(_, query):
         return
     await query.answer("Thanks for joining!")
     pending_prompts.pop(uid, None)
-    text, markup = start_home(query.from_user)
+    text, markup = start_home(query.from_user, view_only(uid, query.message.chat))
     await edit_message(query.message, text, markup)
 
 
@@ -223,7 +240,7 @@ async def force_join_member_update(_, update):
         await edit_message(prompt, join_text(missing), join_markup(uid, missing))
         return
     pending_prompts.pop(uid, None)
-    text, markup = start_home(new.user)
+    text, markup = start_home(new.user, view_only(uid, getattr(prompt, "chat", None)))
     await edit_message(prompt, text, markup)
 
 
@@ -235,7 +252,7 @@ async def guide_cb(_, query):
         return
     await query.answer()
     if page == "home":
-        text, markup = start_home(query.from_user)
+        text, markup = start_home(query.from_user, view_only(int(uid), query.message.chat))
     else:
         buttons = ButtonMaker()
         buttons.data_button(label("back", "Home"), f"guide {uid} home", icon=icon("back"))
@@ -317,13 +334,15 @@ async def start(_, message):
     if await CustomFilters.authorized(_, message):
         text, markup = start_home(message.from_user)
         await send_message(message, text, markup, photo=start_photo())
-    elif Config.BOT_PM:
-        await send_message(
-            message,
-            f"{greeting}<i>Now, Bot will send you all your files and links here. Start Using Now...</i>",
-            reply_markup,
-            photo=start_photo(),
-        )
+    elif message.chat.type == ChatType.PRIVATE:
+        # group members: join first, then they can view everything here and use it in the group
+        if missing := await missing_chats(userid):
+            sent = await send_message(message, join_text(missing), join_markup(userid, missing))
+            if not isinstance(sent, str):
+                pending_prompts[userid] = sent
+        else:
+            text, markup = start_home(message.from_user, view=True)
+            await send_message(message, text, markup, photo=start_photo())
     else:
         await send_message(
             message,

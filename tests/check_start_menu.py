@@ -8,7 +8,7 @@ mod("bot"); mod("bot.core"); mod("bot.core.config_manager", Config=Cfg); mod("bo
 spec = importlib.util.spec_from_file_location("bot.helper.telegram_helper.emoji", f"{REPO}/bot/helper/telegram_helper/emoji.py")
 em = importlib.util.module_from_spec(spec); sys.modules[spec.name] = em; spec.loader.exec_module(em)
 src = open(f"{REPO}/bot/modules/services.py").read(); tree = ast.parse(src)
-want = {"_cmd", "_guide_text", "GUIDE_BUTTONS", "_greeting", "start_body"}
+want = {"_cmd", "_guide_text", "GUIDE_BUTTONS", "_greeting", "start_body", "view_only"}
 body = [n for n in tree.body if (isinstance(n, ast.FunctionDef) and n.name in want) or (isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") in want)]
 bc = ast.parse(open(f"{REPO}/bot/helper/telegram_helper/bot_commands.py").read())
 table = [ast.literal_eval(n.value) for n in ast.walk(bc) if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "_static_commands"][0]
@@ -16,7 +16,10 @@ class BotCommands: pass
 for k, v in table.items(): setattr(BotCommands, f"{k}Command", v)
 lang_ns = {}; exec(open(f"{REPO}/bot/helper/languages/en.py").read(), lang_ns)
 from html import escape
-ns = {"BotCommands": BotCommands, "escape": escape, "Config": Cfg, "e": em.e, "Language": lambda: types.SimpleNamespace(**{k: v for k, v in lang_ns.items() if k.isupper()})}
+class CT: PRIVATE = "private"; SUPERGROUP = "supergroup"
+Cfg.OWNER_ID = 1
+UD = {5: {"AUTH": True}, 6: {"SUDO": True}}
+ns = {"ChatType": CT, "user_data": UD, "sudo_users": [3], "BotCommands": BotCommands, "escape": escape, "Config": Cfg, "e": em.e, "Language": lambda: types.SimpleNamespace(**{k: v for k, v in lang_ns.items() if k.isupper()})}
 exec(compile(ast.Module(body=body, type_ignores=[]), "x", "exec"), ns)
 allowed = {"b", "i", "code", "a", "u", "s", "pre", "blockquote", "tg-emoji", "tg-spoiler"}
 class P(HTMLParser):
@@ -36,4 +39,10 @@ for prem in (False, True):
         print(f"{'PASS' if good else 'FAIL'} premium={prem!s:5} {name:9} {len(txt):4} chars")
 for _, _, page in ns["GUIDE_BUTTONS"]:
     ok &= len(f"guide 8403136096 {page}".encode()) <= 64
+vo = ns["view_only"]
+priv, grp = types.SimpleNamespace(type=CT.PRIVATE), types.SimpleNamespace(type=CT.SUPERGROUP)
+cases = [(9, priv, True), (9, grp, False), (1, priv, False), (3, priv, False), (5, priv, False), (6, priv, False), (9, None, False)]
+for uid, chat, want_ in cases:
+    good = vo(uid, chat) == want_; ok &= good
+    print(f"{'PASS' if good else 'FAIL'} view_only uid={uid} chat={getattr(chat, 'type', None)} -> {want_}")
 print("ALL PASS" if ok else "SOME FAILED")

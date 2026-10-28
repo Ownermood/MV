@@ -5,7 +5,7 @@ def mod(name, **attrs):
     m = types.ModuleType(name); m.__path__ = []; m.__dict__.update(attrs); sys.modules[name] = m; return m
 class Cfg:
     DATABASE_URL = "mongodb://x"; START_TEXT = ""; START_IMAGE = ""; START_LINKS = {}; START_GUIDE = True
-    START_SOURCE_BUTTON = False; PREMIUM_EMOJI = False; USE_IMAGES = False; IMAGES = []; FORCE_SUB_CHATS = []; FORCE_SUB_IDS = ""
+    PREMIUM_EMOJI = False; USE_IMAGES = False; IMAGES = []; FORCE_SUB_CHATS = []; FORCE_SUB_IDS = ""
     @classmethod
     def set(cls, k, v): setattr(cls, k, v)
 saved = {}
@@ -104,7 +104,7 @@ async def main():
         Cfg.PREMIUM_EMOJI = prem
         for page in ("home", "text", "img", "btns", "bc", "prem", "fj", "grp"):
             await click(f"adm 7 {page}")
-            t(f"page {page} valid (premium={prem})", valid(m.text, m.markup) and all(r[2] == ap.RED for r in m.markup))
+            t(f"page {page} valid (premium={prem})", valid(m.text, m.markup) and all(r[2] in (None, ap.GREEN) for r in m.markup))
     Cfg.PREMIUM_EMOJI = False
     q = await click("adm 7 home", uid=8); t("other admin blocked", q.alerts and "another admin" in q.alerts[0])
     answers.append(Str("Welcome to my bot")); await click("adm 7 text_set")
@@ -121,8 +121,14 @@ async def main():
     t("link added (t.me normalized)", saved.get("START_LINKS") == {"📢 Updates": "https://t.me/mychannel"})
     answers.extend([Str("Bad"), Str("javascript:x")]); await click("adm 7 link_add"); t("invalid link refused", len(saved["START_LINKS"]) == 1)
     await click("adm 7 link_rm 0"); t("link removed", saved["START_LINKS"] == {})
-    await click("adm 7 tog_guide"); await click("adm 7 tog_src")
-    t("toggles saved", saved["START_GUIDE"] is False and saved["START_SOURCE_BUTTON"] is True)
+    await click("adm 7 tog_guide")
+    t("guide toggle saved", saved["START_GUIDE"] is False)
+    guide_btn = [r for r in m.markup if r[1] == "adm 7 tog_guide"][0]
+    t("OFF toggle has no colour", guide_btn[2] is None)
+    await click("adm 7 tog_guide")
+    guide_btn = [r for r in m.markup if r[1] == "adm 7 tog_guide"][0]
+    t("ON toggle is green", guide_btn[2] == ap.GREEN)
+    t("no source code toggle anywhere", not any("tog_src" in r[1] for r in m.markup))
     Bot.premium_ok = "error"; await click("adm 7 prem_tog"); t("premium rejected -> stays off", Cfg.PREMIUM_EMOJI is False and "rejected" in m.text)
     Bot.premium_ok = False; await click("adm 7 prem_tog"); t("premium silently stripped -> stays off", Cfg.PREMIUM_EMOJI is False and "not available" in m.text)
     Bot.premium_ok = True; await click("adm 7 prem_tog"); t("premium accepted -> on", Cfg.PREMIUM_EMOJI is True)

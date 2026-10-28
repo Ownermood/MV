@@ -67,11 +67,13 @@ class Config:
     GD_DESP = "Uploaded with WZ Bot"
     AUTHOR_NAME = "Mirror Leech Villan Bot"
     AUTHOR_URL = "https://t.me/Mirrorleech_Villanbot"
-    START_LINKS = {}
+    START_LINKS = {
+        "📢 Villan Community": "https://t.me/VillanCommunity",
+        "💬 Use Bot": "https://t.me/VillanSupport",
+    }
     START_TEXT = ""
     START_IMAGE = ""
     START_GUIDE = True
-    START_SOURCE_BUTTON = False
     PREMIUM_EMOJI = True
     INSTADL_API = ""
     IMDB_TEMPLATE = ""

@@ -71,11 +71,10 @@ MEM_DEEP_STATS = False
 # Telegraph
 AUTHOR_NAME = "Mirror Leech Villan Bot"
 AUTHOR_URL = "https://t.me/Mirrorleech_Villanbot"
-START_LINKS = {}  # /start buttons, e.g. {"📢 Updates": "https://t.me/x", "💬 Support": "https://t.me/y"}
+START_LINKS = {"📢 Villan Community": "https://t.me/VillanCommunity", "💬 Use Bot": "https://t.me/VillanSupport"}  # green /start buttons
 START_TEXT = ""  # custom welcome text under the greeting (HTML); empty = built-in
 START_IMAGE = ""  # welcome photo: URL or Telegram file_id; empty = IMAGES / none
 START_GUIDE = True  # show the guide buttons under /start
-START_SOURCE_BUTTON = False  # show a Source Code button under /start
 PREMIUM_EMOJI = True  # premium emoji in the UI; needs Telegram Premium on the bot owner's account
 FORCE_SUB_CHATS = []  # set from /admin -> Force Join: [{"id": "-100...", "name": "Main Channel", "link": "https://t.me/..."}]
 

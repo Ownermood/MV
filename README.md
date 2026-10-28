@@ -56,7 +56,7 @@ Mirror Leech Villan Bot is built for users who want a single bot stack that can 
 | Debrid unlock | `-ad` (AllDebrid) and `-tb` (TorBox, `TORBOX_API_KEY`) for filehost links, magnets and `.torrent` files |
 | tl;dv recordings | `/mirror` or `/leech` a tldv.io meeting link to get the MP4 (`TLDV_TOKEN` or `-h authorization: Bearer TOKEN`) |
 | Rclone file manager | `/rcfm`: storage usage, empty trash, browse, folder size, rename, delete, mkdir, dedupe |
-| Admin panel | `/admin` (owner/sudo): welcome text, welcome image, start buttons, guide/source toggles, broadcast with preview, premium emoji test switch |
+| Admin panel | `/admin` (owner/sudo): allowed groups, force join (auto verify), welcome text, welcome image, green start buttons, guide toggle, broadcast with preview, premium emoji, bot settings switch |
 | Guided /start | Interactive menu: Leech, Mirror, YouTube & Sites, Torrents, Settings & Tasks, All Commands |
 
 ## How It Runs
@@ -266,5 +266,5 @@ Hardening applied on top of WZML-X (see `SECURITY_AUDIT.md`):
 
 AGPL-3.0, inherited from WZML-X (the GPL-3.0 parts from mirror-leech-telegram-bot and rcmltb are combined under
 section 13 of both licenses). See [LICENSE](LICENSE). Because this is a network service under the AGPL, users of a
-running bot must be able to get its source: the `/start` **Git Repo** button points at this repository, so keep it
-reachable.
+running bot must be able to get its source on request. The bot itself does not link to this repository, so
+keep a way to provide the source to users who ask.

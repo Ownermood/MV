@@ -9,7 +9,7 @@ async def missing_chats(uid, use_cache=True): return state["missing"]
 async def edit_message(m, text, markup=None): state["edits"].append((m, text))
 ns = {"ChatMemberStatus": CMS, "new_task": lambda f: f, "fsub_chats": lambda: [{"id": "-1004443904846"}, {"id": "-1004293604271"}],
       "forget_user": lambda u: state["forgot"].append(u), "pending_prompts": pending, "missing_chats": missing_chats,
-      "edit_message": edit_message, "join_text": lambda m: f"JOIN {m}", "join_markup": lambda u, m: None, "start_home": lambda u: ("HOME", None)}
+      "edit_message": edit_message, "join_text": lambda m: f"JOIN {m}", "join_markup": lambda u, m: None, "start_home": lambda u, view=False: ("HOME-VIEW" if view else "HOME", None), "view_only": lambda u, chat: chat == "DM"}
 exec(compile(ast.Module(body=nodes, type_ignores=[]), "x", "exec"), ns)
 f = ns["force_join_member_update"]
 def upd(chat, uid, status): return types.SimpleNamespace(chat=types.SimpleNamespace(id=int(chat)), new_chat_member=types.SimpleNamespace(user=types.SimpleNamespace(id=uid), status=status))
@@ -24,6 +24,9 @@ async def main():
     state["missing"] = []
     await f(None, upd("-1004293604271", 9, CMS.MEMBER))
     t("joined both -> prompt becomes the welcome menu", state["edits"][-1] == ("PROMPT", "HOME") and 9 not in pending)
+    dm = types.SimpleNamespace(chat="DM"); pending[10] = dm
+    await f(None, upd("-1004293604271", 10, CMS.MEMBER))
+    t("DM prompt becomes view-only welcome", state["edits"][-1] == (dm, "HOME-VIEW"))
     n = len(state["edits"])
     await f(None, upd("-1009999", 9, CMS.MEMBER)); t("other chats ignored", len(state["edits"]) == n)
     await f(None, upd("-1004443904846", 9, CMS.LEFT)); t("leaving is not a join", len(state["edits"]) == n)
