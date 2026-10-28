@@ -8,7 +8,7 @@ mod("bot"); mod("bot.core"); mod("bot.core.config_manager", Config=Cfg); mod("bo
 spec = importlib.util.spec_from_file_location("bot.helper.telegram_helper.emoji", f"{REPO}/bot/helper/telegram_helper/emoji.py")
 em = importlib.util.module_from_spec(spec); sys.modules[spec.name] = em; spec.loader.exec_module(em)
 src = open(f"{REPO}/bot/modules/services.py").read(); tree = ast.parse(src)
-want = {"_cmd", "_guide_text", "GUIDE_BUTTONS", "_greeting", "start_body", "view_only", "_start_links"}
+want = {"_cmd", "_guide_text", "GUIDE_BUTTONS", "_greeting", "start_body", "view_only", "_start_links", "is_admin"}
 body = [n for n in tree.body if (isinstance(n, ast.FunctionDef) and n.name in want) or (isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") in want)]
 bc = ast.parse(open(f"{REPO}/bot/helper/telegram_helper/bot_commands.py").read())
 table = [ast.literal_eval(n.value) for n in ast.walk(bc) if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "_static_commands"][0]
@@ -54,4 +54,7 @@ for links, want_ in (({"A": "https://a"}, [("A", "https://a", None)]), ({}, [("V
     Cfg.START_LINKS = links; bm = BM(); ns["_start_links"](bm, None)
     good = bm.urls == want_; ok &= good
     print(f"{'PASS' if good else 'FAIL'} start links {links or 'empty -> force join chats'}: {bm.urls}")
+for uid, want_ in ((1, True), (3, True), (6, True), (5, False), (9, False)):
+    good = ns["is_admin"](uid) == want_; ok &= good
+    print(f"{'PASS' if good else 'FAIL'} is_admin uid={uid} -> {want_}")
 print("ALL PASS" if ok else "SOME FAILED")

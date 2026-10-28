@@ -303,6 +303,11 @@ async def admin_panel_cb(_, query):
         return
     if action in PAGES:
         await query.answer()
+        if msg.photo:
+            # opened from the /start photo: captions are short, use a new text message
+            await ensure_admin_menu(uid)
+            text, markup = await PAGES[action](uid)
+            return await send_message(msg.chat.id, text, markup)
         return await _show(msg, uid, action)
     if action == "close":
         await query.answer()
@@ -316,7 +321,8 @@ async def admin_panel_cb(_, query):
         return await edit_message(msg, text, markup)
     if action == "preview":
         await query.answer("Preview sent to your private chat.")
-        text, markup = start_home(query.from_user)
+        # preview what normal users see, without the admin button
+        text, markup = start_home(query.from_user, admin=False)
         sent = await send_message(uid, text, markup, photo=start_photo())
         if isinstance(sent, str):
             await TgClient.bot.send_message(uid, f"Preview failed: {escape(sent)}")

@@ -104,7 +104,16 @@ def view_only(user_id, chat):
     )
 
 
-def start_home(user, view=False):
+def is_admin(user_id):
+    return (
+        user_id == Config.OWNER_ID
+        or user_id in sudo_users
+        or bool(user_data.get(user_id, {}).get("SUDO"))
+    )
+
+
+def start_home(user, view=False, admin=None):
+    """admin=None: owner/sudo get the red Admin Panel button in place of the links."""
     lang = Language()
     buttons = ButtonMaker()
     if Config.START_GUIDE:
@@ -112,7 +121,16 @@ def start_home(user, view=False):
             buttons.data_button(
                 label(name, text), f"guide {user.id} {page}", icon=icon(name)
             )
-    _start_links(buttons, lang)
+    if is_admin(user.id) if admin is None else admin:
+        buttons.data_button(
+            label("gem", "Admin Panel"),
+            f"adm {user.id} home",
+            "f_body",
+            style=ButtonStyle.DANGER,
+            icon=icon("gem"),
+        )
+    else:
+        _start_links(buttons, lang)
     text = _greeting(user) + start_body(lang)
     if view:
         text += (
