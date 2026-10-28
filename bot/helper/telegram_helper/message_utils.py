@@ -523,6 +523,48 @@ class TgSource:
         return found, asked, session, parsed
 
 
+def _use_rich(text):
+    return getattr(text, "rich", None) is not None and not (
+        Config.USE_IMAGES and Config.IMAGES
+    )
+
+
+async def _send_status(msg, text, buttons):
+    """Status as a rich message when possible, else the normal HTML card.
+    Returns (message, is_rich)."""
+    if _use_rich(text):
+        try:
+            sent = await TgClient.bot.send_message(
+                chat_id=msg.chat.id,
+                text=str(text),
+                rich_text=text.rich,
+                reply_markup=buttons,
+                reply_parameters=ReplyParameters(message_id=msg.id),
+                disable_notification=True,
+            )
+            return sent, True
+        except Exception as err:
+            LOGGER.warning(f"Rich status not sent, using normal text: {err}")
+    return await send_message(msg, text, buttons, block=False, photo="IMAGES"), False
+
+
+async def _edit_status(message, text, buttons, is_rich):
+    if is_rich and _use_rich(text):
+        try:
+            return await TgClient.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=message.id,
+                text=str(text),
+                rich_text=text.rich,
+                reply_markup=buttons,
+            )
+        except Exception as err:
+            if "MESSAGE_NOT_MODIFIED" in str(err):
+                return message
+            LOGGER.warning(f"Rich status not edited, using normal text: {err}")
+    return await edit_message(message, text, buttons, block=False, photo="IMAGES")
+
+
 async def update_status_message(sid, force=False):
     if intervals["stopAll"]:
         return
@@ -549,8 +591,11 @@ async def update_status_message(sid, force=False):
                 del intervals["status"][sid]
             return
         if text != status_dict[sid]["message"].text:
-            message = await edit_message(
-                status_dict[sid]["message"], text, buttons, block=False, photo="IMAGES"
+            message = await _edit_status(
+                status_dict[sid]["message"],
+                text,
+                buttons,
+                status_dict[sid].get("rich", False),
             )
             if isinstance(message, str):
                 if message.startswith("Telegram says: [40"):
@@ -587,9 +632,7 @@ async def send_status_message(msg, user_id=0):
                     del intervals["status"][sid]
                 return
             old_message = status_dict[sid]["message"]
-            message = await send_message(
-                msg, text, buttons, block=False, photo="IMAGES"
-            )
+            message, is_rich = await _send_status(msg, text, buttons)
             if isinstance(message, str):
                 LOGGER.error(
                     f"Status with id: {sid} haven't been sent. Error: {message}"
@@ -597,14 +640,14 @@ async def send_status_message(msg, user_id=0):
                 return
             await delete_message(old_message)
             message.text = text
-            status_dict[sid].update({"message": message, "time": time()})
+            status_dict[sid].update(
+                {"message": message, "time": time(), "rich": is_rich}
+            )
         else:
             text, buttons = await get_readable_message(sid, is_user)
             if text is None:
                 return
-            message = await send_message(
-                msg, text, buttons, block=False, photo="IMAGES"
-            )
+            message, is_rich = await _send_status(msg, text, buttons)
             if isinstance(message, str):
                 LOGGER.error(
                     f"Status with id: {sid} haven't been sent. Error: {message}"
@@ -618,6 +661,7 @@ async def send_status_message(msg, user_id=0):
                 "page_step": 1,
                 "status": "All",
                 "is_user": is_user,
+                "rich": is_rich,
             }
         if not intervals["status"].get(sid) and not is_user:
             intervals["status"][sid] = SetInterval(

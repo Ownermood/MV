@@ -1,6 +1,6 @@
 from asyncio import gather, iscoroutinefunction
 from html import escape
-from re import findall
+from re import findall, sub as re_sub
 from time import time
 
 from psutil import cpu_percent, disk_usage, virtual_memory
@@ -222,6 +222,12 @@ def get_progress_bar_string(pct):
     return "▰" * filled + "▱" * (10 - filled)
 
 
+class StatusText(str):
+    """Status HTML; .rich holds the rich message version when one was built."""
+
+    rich = None
+
+
 UPLOAD_NAMES = {"Leech": "Telegram", "GDrive": "Google Drive", "RClone": "Rclone"}
 
 
@@ -253,6 +259,7 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
 
     from ..telegram_helper.bot_commands import BotCommands
 
+    rich_tasks = []
     shown = len(tasks[start_position : STATUS_LIMIT + start_position])
     if tasks_no:
         msg += f"{e('list')} <b>Tasks:</b> {shown}/{tasks_no}"
@@ -271,62 +278,89 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
         listener = task.listener
         user = listener.message.from_user
         elapsed = get_readable_time(time() - listener.message.date.timestamp())
-        msg += f"{e(STATUS_ICONS.get(tstatus, 'gear'))} <b>{index + start_position}. {tstatus}</b>\n"
-        rows = [f"<i>{escape(f'{task.name()}')}</i>"]
-        if listener.subname:
-            rows.append(f"<i>↳ {escape(listener.subname)}</i>")
+        title = f"{index + start_position}. {tstatus}"
+        icon_name = STATUS_ICONS.get(tstatus, "gear")
+        bar = pct = None
+        fields = []
         if (
             tstatus not in [MirrorStatus.STATUS_SEED, MirrorStatus.STATUS_QUEUEUP]
             and listener.progress
         ):
-            progress = task.progress()
-            rows.append(f"{get_progress_bar_string(progress)} <b>{progress}</b>")
+            pct = task.progress()
+            bar = get_progress_bar_string(pct)
             subsize = (
                 f" / {get_readable_file_size(listener.subsize)}"
                 if listener.subname
                 else ""
             )
-            rows.append(f"<b>Processed:</b> {task.processed_bytes()}{subsize}")
-            rows.append(f"<b>Size:</b> {task.size()}")
-            rows.append(f"<b>Speed:</b> {task.speed()}")
-            rows.append(f"<b>ETA:</b> {task.eta()}")
+            fields += [
+                ("Processed", f"{task.processed_bytes()}{subsize}"),
+                ("Size", task.size()),
+                ("Speed", task.speed()),
+                ("ETA", task.eta()),
+            ]
             if listener.subname:
                 ac = len(listener.files_to_proceed)
-                rows.append(f"<b>Files:</b> {listener.proceed_count} / {ac or '?'}")
+                fields.append(("Files", f"{listener.proceed_count} / {ac or '?'}"))
             if tstatus == MirrorStatus.STATUS_DOWNLOAD and (
                 listener.is_torrent or listener.is_qbit
             ):
                 try:
-                    rows.append(
-                        f"<b>Seeders:</b> {task.seeders_num()} | <b>Leechers:</b> {task.leechers_num()}"
+                    fields.append(
+                        ("Peers", f"{task.seeders_num()} seeders · {task.leechers_num()} leechers")
                     )
                 except Exception:
                     pass
         elif tstatus == MirrorStatus.STATUS_SEED:
-            rows.append(f"<b>Size:</b> {task.size()}")
-            rows.append(f"<b>Uploaded:</b> {task.uploaded_bytes()}")
-            rows.append(f"<b>Speed:</b> {task.seed_speed()}")
-            rows.append(f"<b>Ratio:</b> {task.ratio()}")
-            rows.append(f"<b>Seeding:</b> {task.seeding_time()}")
+            fields += [
+                ("Size", task.size()),
+                ("Uploaded", task.uploaded_bytes()),
+                ("Speed", task.seed_speed()),
+                ("Ratio", task.ratio()),
+                ("Seeding", task.seeding_time()),
+            ]
         else:
-            rows.append(f"<b>Size:</b> {task.size()}")
-        rows.append(f"<b>Elapsed:</b> {elapsed}")
-        rows.append(f"<b>Upload:</b> {upload_text(listener.mode)}")
-        rows.append(f"<b>Engine:</b> {task.engine}")
+            fields.append(("Size", task.size()))
+        upload = upload_text(listener.mode)
+        fields += [("Elapsed", elapsed), ("Upload", upload), ("Engine", task.engine)]
+        can_select = tstatus in [
+            MirrorStatus.STATUS_DOWNLOAD,
+            MirrorStatus.STATUS_PAUSED,
+            MirrorStatus.STATUS_QUEUEDL,
+        ] and (listener.is_torrent or listener.is_qbit or listener.is_nzb)
+        gid = task.gid()[:8]
+
+        msg += f"{e(icon_name)} <b>{title}</b>\n"
+        rows = [f"<i>{escape(f'{task.name()}')}</i>"]
+        if listener.subname:
+            rows.append(f"<i>↳ {escape(listener.subname)}</i>")
+        if bar:
+            rows.append(f"{bar} <b>{pct}</b>")
+        rows += [f"<b>{k}:</b> {v}" for k, v in fields]
         by = f"<b>User:</b> {user.mention(style='html')} (<code>{user.id}</code>)"
         if listener.is_super_chat:
             by += f" · <a href='{listener.message.link}'>Link</a>"
         rows.append(by)
         msg += "<blockquote>" + "\n".join(rows) + "</blockquote>\n"
         cmds = []
-        if tstatus in [
-            MirrorStatus.STATUS_DOWNLOAD,
-            MirrorStatus.STATUS_PAUSED,
-            MirrorStatus.STATUS_QUEUEDL,
-        ] and (listener.is_torrent or listener.is_qbit or listener.is_nzb):
-            cmds.append(f"Select /{BotCommands.SelectCommand[1]}_{task.gid()[:8]}")
-        cmds.append(f"Stop /{BotCommands.CancelTaskCommand[1]}_{task.gid()[:8]}")
+        if can_select:
+            cmds.append(f"Select /{BotCommands.SelectCommand[1]}_{gid}")
+        cmds.append(f"Stop /{BotCommands.CancelTaskCommand[1]}_{gid}")
         msg += f"{e('close')} " + "  ·  ".join(cmds) + "\n\n"
+        rich_tasks.append(
+            {
+                "icon": icon_name,
+                "title": title,
+                "name": task.name(),
+                "sub": listener.subname,
+                "bar": bar,
+                "pct": pct,
+                "fields": [(k, re_sub(r"<[^>]+>", "", str(v))) for k, v in fields],
+                "user": (getattr(user, "first_name", None) or "User", user.id),
+                "select": can_select,
+                "gid": gid,
+            }
+        )
 
     if len(msg) == 0:
         if status == "All":
@@ -364,9 +398,29 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
                 buttons.data_button(label, f"status {sid} st {status_value}")
     button = buttons.build_menu(8)
     free = disk_usage(DOWNLOAD_DIR)
+    cpu, ram = cpu_percent(), virtual_memory().percent
+    free_text = get_readable_file_size(free.free)
+    uptime = get_readable_time(time() - bot_start_time)
     msg += (
         f"{e('chart')} <b>Bot Stats</b>\n"
-        f"<blockquote><b>CPU:</b> {cpu_percent()}% | <b>FREE:</b> {get_readable_file_size(free.free)}\n"
-        f"<b>RAM:</b> {virtual_memory().percent}% | <b>UPTIME:</b> {get_readable_time(time() - bot_start_time)}</blockquote>"
+        f"<blockquote><b>CPU:</b> {cpu}% | <b>FREE:</b> {free_text}\n"
+        f"<b>RAM:</b> {ram}% | <b>UPTIME:</b> {uptime}</blockquote>"
     )
+    msg = StatusText(msg)
+    if rich_tasks and Config.RICH_STATUS:
+        from .status_rich import build_rich_status
+
+        header = f"Tasks: {shown}/{tasks_no}"
+        if pages > 1:
+            header += f"  ·  Page {page_no}/{pages}"
+        try:
+            msg.rich = build_rich_status(
+                header,
+                rich_tasks,
+                [("CPU", f"{cpu}%"), ("RAM", f"{ram}%"), ("Free", free_text), ("Uptime", uptime)],
+            )
+        except Exception as err:
+            from ... import LOGGER
+
+            LOGGER.error(f"Rich status build failed, using HTML: {err}")
     return msg, button

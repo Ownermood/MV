@@ -1,6 +1,12 @@
 from .bot_settings import send_bot_settings, edit_bot_settings
 from .memory import memory_stats, memory_callback
-from .cancel_task import cancel, cancel_multi, cancel_all_buttons, cancel_all_update
+from .cancel_task import (
+    cancel,
+    cancel_multi,
+    cancel_all_buttons,
+    cancel_all_update,
+    rich_cancel_cb,
+)
 from .chat_permission import (
     authorize,
     unauthorize,
@@ -12,7 +18,7 @@ from .chat_permission import (
 )
 from .clone import clone_node
 from .exec import aioexecute, execute, clear
-from .file_selector import select, confirm_selection
+from .file_selector import select, confirm_selection, rich_select_cb
 from .force_start import remove_from_queue
 from .gd_count import count_node
 from .gd_delete import delete_file
@@ -78,6 +84,8 @@ __all__ = [
     "cancel_multi",
     "cancel_all_buttons",
     "cancel_all_update",
+    "rich_cancel_cb",
+    "rich_select_cb",
     "authorize",
     "unauthorize",
     "add_sudo",

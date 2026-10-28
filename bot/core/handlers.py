@@ -129,6 +129,14 @@ async def add_handlers():
     TgClient.bot.add_handler(
         CallbackQueryHandler(cancel_multi, filters=regex("^stopm"))
     )
+    # Cancel/Select buttons inside the rich status card; owner/sudo/task owner
+    # is checked in the callbacks
+    TgClient.bot.add_handler(
+        CallbackQueryHandler(rich_cancel_cb, filters=regex(r"^rcan \w+$"))
+    )
+    TgClient.bot.add_handler(
+        CallbackQueryHandler(rich_select_cb, filters=regex(r"^rsel \w+$"))
+    )
     TgClient.bot.add_handler(
         MessageHandler(
             clone_node,

@@ -62,6 +62,27 @@ async def cancel(_, message):
     await obj.cancel_task()
 
 
+def _can_manage(task, user_id):
+    return (
+        Config.OWNER_ID == user_id
+        or task.listener.user_id == user_id
+        or bool(user_data.get(user_id, {}).get("SUDO"))
+    )
+
+
+@new_task
+async def rich_cancel_cb(_, query):
+    """Cancel Task button inside the rich status card: "rcan <gid>"."""
+    gid = query.data.split()[1]
+    task = await get_task_by_gid(gid)
+    if task is None:
+        return await query.answer("This task is already finished.", show_alert=True)
+    if not _can_manage(task, query.from_user.id):
+        return await query.answer("This is not your task!", show_alert=True)
+    await query.answer("Cancelling…")
+    await task.task().cancel_task()
+
+
 @new_task
 async def cancel_multi(_, query):
     data = query.data.split()

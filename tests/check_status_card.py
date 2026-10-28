@@ -14,21 +14,23 @@ def load(name, path):
     m = importlib.util.module_from_spec(spec); sys.modules[name] = m; spec.loader.exec_module(m); return m
 
 
-class Cfg: PREMIUM_EMOJI = False; STATUS_LIMIT = 4
+class Cfg: PREMIUM_EMOJI = False; STATUS_LIMIT = 4; RICH_STATUS = True
 class Lock:
     async def __aenter__(s): pass
     async def __aexit__(s, *a): pass
 mod("psutil", cpu_percent=lambda: 0.2, virtual_memory=lambda: types.SimpleNamespace(percent=12.5), disk_usage=lambda p: types.SimpleNamespace(free=939 * 1024**3, percent=1.7))
-mod("bot", DOWNLOAD_DIR="/", bot_cache={}, bot_start_time=0, status_dict={}, task_dict={}, task_dict_lock=Lock())
+mod("bot", LOGGER=types.SimpleNamespace(error=print, warning=print), DOWNLOAD_DIR="/", bot_cache={}, bot_start_time=0, status_dict={}, task_dict={}, task_dict_lock=Lock())
 mod("bot.core"); mod("bot.core.config_manager", Config=Cfg); mod("bot.helper"); mod("bot.helper.ext_utils"); mod("bot.helper.telegram_helper")
 mod("bot.helper.telegram_helper.bot_commands", BotCommands=types.SimpleNamespace(SelectCommand=["select", "sel"], CancelTaskCommand=["cancel", "c"]))
 load("bot.helper.telegram_helper.button_build", "bot/helper/telegram_helper/button_build.py")
 load("bot.helper.telegram_helper.emoji", "bot/helper/telegram_helper/emoji.py")
 su = load("bot.helper.ext_utils.status_utils", "bot/helper/ext_utils/status_utils.py")
+load("bot.helper.ext_utils.status_rich", "bot/helper/ext_utils/status_rich.py")
 
 
 class User:
     id = 8403136097
+    first_name = "OWNER & MOOD"
     def mention(self, style): return "<a href='tg://user?id=8403136097'>OWNER &amp; MOOD</a>"
 
 
@@ -82,4 +84,19 @@ print(f"{'PASS' if good else 'FAIL'} 6 tasks paged, {len(msg)} chars")
 good = su.get_progress_bar_string("35.67%") == "▰" * 4 + "▱" * 6 and len(su.get_progress_bar_string(100)) == 10
 ok &= good
 print(f"{'PASS' if good else 'FAIL'} progress bar {su.get_progress_bar_string('35.67%')}")
+# rich version: must exist and serialize to valid TL (what is sent to Telegram)
+for prem in (False, True):
+    Cfg.PREMIUM_EMOJI = prem
+    TASKS = [Task("Download"), Task("Upload")]
+    msg, btn = asyncio.run(su.get_readable_message(1, False))
+    raw_msg = msg.rich.write()
+    data = raw_msg.write()
+    blob = repr(raw_msg)
+    good = len(data) > 200 and b"rcan e90c669b" in data and b"rsel e90c669b" in data and "bg_danger=True" in blob and "bg_primary=True" in blob and ("TextCustomEmoji" in blob) == prem
+    ok &= good
+    print(f"{'PASS' if good else 'FAIL'} rich card premium={prem}: {len(data)} bytes TL, cancel+select buttons, styles")
+Cfg.RICH_STATUS = False
+msg, _ = asyncio.run(su.get_readable_message(1, False))
+good = msg.rich is None; ok &= good
+print(f"{'PASS' if good else 'FAIL'} RICH_STATUS off -> no rich version")
 print("ALL PASS" if ok else "SOME FAILED")

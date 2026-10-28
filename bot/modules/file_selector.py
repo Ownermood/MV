@@ -60,6 +60,11 @@ async def select(_, message):
         )
         await send_message(message, msg)
         return
+    await start_selection(task, user_id, message)
+
+
+async def start_selection(task, user_id, message):
+    """Pause a torrent/NZB task and send the file selection buttons to `message`."""
     if (
         Config.OWNER_ID != user_id
         and task.listener.user_id != user_id
@@ -107,6 +112,26 @@ async def select(_, message):
     SBUTTONS = bt_selection_buttons(id_, message)
     msg = "<b>Download Paused!</b>\n\n<i>Select your files &amp; press <b>Done Selecting</b> to start.</i>"
     await send_message(message, msg, SBUTTONS)
+
+
+@new_task
+async def rich_select_cb(_, query):
+    """Select Files button inside the rich status card: "rsel <gid>"."""
+    gid = query.data.split()[1]
+    task = await get_task_by_gid(gid)
+    if task is None:
+        return await query.answer("This task is already finished.", show_alert=True)
+    user_id = query.from_user.id
+    if (
+        Config.OWNER_ID != user_id
+        and task.listener.user_id != user_id
+        and not user_data.get(user_id, {}).get("SUDO")
+    ):
+        return await query.answer("This is not your task!", show_alert=True)
+    if not Config.BASE_URL:
+        return await query.answer("Base URL not defined!", show_alert=True)
+    await query.answer()
+    await start_selection(task, user_id, query.message)
 
 
 async def _selection_limit_exceeded(task, message):
