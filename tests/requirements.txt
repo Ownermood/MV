@@ -1,0 +1,5 @@
+google-auth
+gallery-dl
+niquests
+aiofiles
+aioshutil

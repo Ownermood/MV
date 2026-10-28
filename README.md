@@ -52,6 +52,10 @@ Mirrorleach Villanbot is built for users who want a single bot stack that can mi
 | Multi-source downloads | Use qBittorrent, Aria2, JDownloader, Mega, NZB, and yt-dlp integrations |
 | Storage and upload paths | Push content to Google Drive, Rclone, Mega, and other supported routes |
 | Automation | Limit tasks, tune queues, and manage startup updates from one config layer |
+| gallery-dl | `/gallerydl` (`/gdl`) and `/gallerydlleech` (`/gdlleech`) for image/media sites; options via `-opt`, `/usetting` or `GALLERY_DL_OPTIONS` |
+| Debrid unlock | `-ad` (AllDebrid) and `-tb` (TorBox, `TORBOX_API_KEY`) for filehost links, magnets and `.torrent` files |
+| tl;dv recordings | `/mirror` or `/leech` a tldv.io meeting link to get the MP4 (`TLDV_TOKEN` or `-h authorization: Bearer TOKEN`) |
+| Rclone file manager | `/rcfm`: storage usage, empty trash, browse, folder size, rename, delete, mkdir, dedupe |
 
 ## How It Runs
 
@@ -225,11 +229,17 @@ Then tune the optional behavior from `config_sample.py`.
 | `qBittorrent/` | Default qBittorrent configuration |
 | `sabnzbd/` | Default SABnzbd configuration |
 
+## Checks
+
+`python3 tests/run_checks.py` runs the security and port checks (sanitizers, unpickler, rclone
+filters, symlink cleanup, gallery-dl, TorBox, tl;dv, `/rcfm`) without a Telegram config.
+Install `tests/requirements.txt` first; the tl;dv check also needs `ffmpeg`.
+
 ## Security Model
 
 | Role | Can do |
 |---|---|
-| **Owner** (`OWNER_ID`) | Everything: `/shell`, `/exec`, `/aexec`, `/plugins`, add/remove sudo, secret config vars, private files |
+| **Owner** (`OWNER_ID`) | Everything: `/shell`, `/exec`, `/aexec`, `/plugins`, add/remove sudo, secret config vars, private files, aria2/qBit/SABnzbd/usenet options |
 | **Sudo** | Bot settings (non-secret vars), authorize users/chats, restart, logs, broadcast |
 | **Authorized** | Mirror, leech, clone, yt-dlp, search, own user settings |
 
@@ -241,6 +251,7 @@ Hardening applied on top of WZML-X (see `SECURITY_AUDIT.md`):
 - User-supplied yt-dlp options, FFmpeg commands, rclone flags and rclone configs are filtered so they cannot
   run programs or read/write files outside the task folder (the owner is not restricted).
 - The stats version check parses the upstream version as text instead of downloading and running it.
+- `-n`/`-m` names, remote file paths from direct/debrid hosts and extracted symlinks cannot reach outside the task folder.
 - Crash telemetry to the upstream developers is **off** by default (`ENABLE_TELEMETRY`).
 
 ## Credits

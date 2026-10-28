@@ -179,3 +179,41 @@ value = eval(value)                      # per-user {dict} settings (UPLOAD_PATH
 ---
 
 *Static analysis only — no exploits executed, no runtime verification. Findings are code-path confirmed via source review; severity reflects reachability by trust tier (owner > sudo > authorized).*
+
+---
+
+## 9. Status in this repo (Mirrorleach Villanbot, based on WZML-X wzv3)
+
+Everything above describes the upstream projects. This repo is WZML-X plus the fixes below; each is a
+separate commit on this branch. Findings found during the merge (not in the sections above) are marked *new*.
+
+| Issue | Status here |
+|---|---|
+| #1 `eval(-opt)` / yt-dlp options | WZML-X already used `literal_eval`; non-owner yt-dlp options now drop Exec postprocessors, external downloaders, ffmpeg location/args, paths/outtmpl, cookie files, file URLs, netrc_cmd |
+| #2 `eval` on GD-search callbacks | Not present in WZML-X |
+| #3 `/shell` `/exec` `/aexec` for sudo | Owner-only again; also `/addsudo`, `/rmsudo`, `/plugins` |
+| #4 `eval` in settings | Remaining `eval` in user settings replaced with `literal_eval`; no `eval` left in `bot/` |
+| #5 `eval` on ffprobe/API output | Not present in WZML-X |
+| *new* sudo reads/edits secrets in `/bsetting` | Tokens, session string, DB URL, API keys, passwords, `UPSTREAM_REPO`, private files, git push: owner-only (enforced on the callback) |
+| *new* qBit `autorun_program` / SABnzbd scripts via `/bsetting` | aria2/qBit/SABnzbd/usenet option view/edit is owner-only |
+| *new* user `token.pickle` loaded with `pickle.load` | Restricted unpickler: Google Credentials classes only |
+| *new* user FFmpeg cmds read/write host files | Absolute paths, traversal and protocols refused for non-owners; ffmpeg runs inside the task folder |
+| *new* user rclone flags / rclone.conf | `--password-command`, `--config`, `--rc`, file flags dropped; `local`/`alias` remotes, `*command*`/`ssh` options and local paths refused |
+| *new* `-n` / `-m` path traversal | Names kept to one path component |
+| *new* remote paths from direct/debrid hosts | Joined paths cannot leave the task folder |
+| *new* archive symlinks | Links pointing outside the extraction folder are removed |
+| *new* `/stats` ran upstream `version.py` | Version parsed as text, never executed |
+| *new* AllDebrid key in chat errors | Masked |
+| *new* telemetry uploads recent logs | `ENABLE_TELEMETRY` defaults to False |
+| #6 unpinned dependencies | **Still open** — see below |
+
+Ported features carry their own fixes: gallery-dl (`literal_eval`, option scrubbing, serialized jobs),
+TorBox (key masked in errors), tl;dv (TLS verification on, token only sent to tldv.io).
+
+**Still open, with reasons:**
+- Dependencies are unpinned and `update.py` upgrades them on boot. Pinning needs the versions in the
+  `mysterysd/wzmlx:wzadv` base image, which could not be inspected here; pinning blindly can break the build.
+- The Docker base image is a third-party prebuilt image (`mysterysd/wzmlx:wzadv`).
+- AllDebrid/TorBox magnets are resolved before the task is registered, so `/cancel` cannot stop that wait
+  (inherited from WZML-X's AllDebrid flow).
+- Nothing here was run against live Telegram; checks use stubs (`python3 tests/run_checks.py`).
