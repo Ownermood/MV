@@ -303,7 +303,7 @@ async def _delete_link(message, args):
     if not await CustomFilters.sudo("", message):
         await send_message(
             message,
-            "<b>Not allowed.</b>\n\n<i>Only the owner or a sudo user can "
+            "<b>Not allowed.</b>\n\n<i>Only the owner or an admin can "
             "delete stream links.</i>",
         )
         await delete_links(message)

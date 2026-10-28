@@ -696,7 +696,7 @@ async def edit_plugins_menu(client, query):
         return await query.answer(
             "Only the owner can change plugins."
             if action in OWNER_ONLY
-            else "Sudo users only.",
+            else "Admins only.",
             show_alert=True,
         )
     if action in MUTATING and Config.DISABLE_PLUGINS:

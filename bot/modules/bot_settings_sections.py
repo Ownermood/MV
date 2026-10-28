@@ -30,7 +30,7 @@ def pretty_key(key):
 
 # id: (emoji name, title, what the map says, keys). "adv" takes every key not listed.
 SECTIONS = {
-    "bot": ("users", "Bot", "owner, sudo, auth, start, images", [
+    "bot": ("users", "Bot", "owner, admins, start, images", [
         "OWNER_ID", "SUDO_USERS", "AUTHORIZED_CHATS", "BOT_TOKEN", "TELEGRAM_API",
         "TELEGRAM_HASH", "DATABASE_URL", "CMD_SUFFIX", "DEFAULT_LANG", "TIMEZONE",
         "SET_COMMANDS", "AUTHOR_NAME", "AUTHOR_URL", "START_LINKS", "START_TEXT",

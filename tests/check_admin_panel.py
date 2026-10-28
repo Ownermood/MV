@@ -64,7 +64,9 @@ mod("bot.helper.telegram_helper.button_build", ButtonMaker=BM, valid_url=lambda 
 mod("bot.helper.telegram_helper.message_utils", send_message=send_message, edit_message=edit_message, delete_message=delete_message)
 mod("bot.helper.telegram_helper.prompt", STOP="STOP", PromptUnreachable=type("PU", (Exception,), {}), ask_in_pm=ask_in_pm)
 mod("bot.modules"); mod("bot.modules.broadcast", run_broadcast=run_broadcast)
-mod("bot.helper.telegram_helper.bot_commands", BotCommands=types.SimpleNamespace(admin_menu_set={123}))
+mod("bot.helper.telegram_helper.bot_commands", BotCommands=types.SimpleNamespace(
+    admin_menu_set={123}, AuthorizeCommand=["adduser"], UnAuthorizeCommand=["rmuser"],
+    AddSudoCommand=["addadmin"], RmSudoCommand=["rmadmin"]))
 class CMS: ADMINISTRATOR = "admin"; OWNER = "owner"; MEMBER = "member"
 import pyrogram.enums as _en
 _en.ChatMemberStatus = CMS
@@ -81,7 +83,7 @@ mod("bot.helper.telegram_helper.tg_utils", chat_info=chat_info)
 menu_calls = []
 async def ensure_admin_menu(uid): menu_calls.append(uid)
 mod("bot.modules.services", start_home=lambda u: ("HOME", []), start_photo=lambda: "IMAGES", ensure_admin_menu=ensure_admin_menu)
-for name, path in (("bot.helper.telegram_helper.emoji", "bot/helper/telegram_helper/emoji.py"), ("bot.modules.admin_panel", "bot/modules/admin_panel.py")):
+for name, path in (("bot.helper.telegram_helper.emoji", "bot/helper/telegram_helper/emoji.py"), ("bot.helper.telegram_helper.rich_name", "bot/helper/telegram_helper/rich_name.py"), ("bot.modules.admin_panel", "bot/modules/admin_panel.py"), ("bot.modules.chat_permission", "bot/modules/chat_permission.py")):
     spec = importlib.util.spec_from_file_location(name, f"{REPO}/{path}")
     m = importlib.util.module_from_spec(spec); sys.modules[name] = m; spec.loader.exec_module(m)
 ap = sys.modules["bot.modules.admin_panel"]
@@ -186,6 +188,30 @@ async def main():
     await click("adm 7 usr"); t("users page lists them", "Ann" in m.text and "<code>456</code>" in m.text and valid(m.text, m.markup))
     await click("adm 7 usr_rm 456"); t("user removed", udata[456]["AUTH"] is False)
     pm_queue.append(Msg(text="@nobody")); await click("adm 7 usr_add"); t("unknown user refused", "not found" in m.text)
+    # commands: /addadmin Name ID with premium emoji, /rmadmin, /adduser, /rmuser
+    from pyrogram.enums import ChatType, MessageEntityType
+    from pyrogram.types import MessageEntity
+    cp = sys.modules["bot.modules.chat_permission"]
+    def cmd(text, entities=(), reply=None):
+        return types.SimpleNamespace(text=text, entities=list(entities), reply_to_message=reply,
+                                     chat=types.SimpleNamespace(type=ChatType.PRIVATE, id=7),
+                                     message_thread_id=None, is_topic_message=False)
+    await cp.add_sudo(None, cmd("/addadmin"))
+    t("/addadmin alone shows the easy usage", "/addadmin Wifu 8494053059" in sent[-1][1])
+    star = MessageEntity(type=MessageEntityType.CUSTOM_EMOJI, offset=15, length=1, custom_emoji_id=5444939047132755535)
+    await cp.add_sudo(None, cmd("/addadmin Wifu ⭐ 8494050001", [star]))
+    nm = udata[8494050001].get("PANEL_NAME", "")
+    t(f"/addadmin keeps premium emoji in the name ({nm})", udata[8494050001].get("SUDO") is True and nm == 'Wifu <tg-emoji emoji-id="5444939047132755535">⭐</tg-emoji>')
+    t("new admin got the DM with the tag", any(u == 8494050001 and "tg-emoji" in x for u, x in Bot.dms) and "is now an admin" in sent[-1][1])
+    await cp.add_sudo(None, cmd("/addadmin Boss <b> 8494050001"))
+    t("name with HTML is escaped", udata[8494050001]["PANEL_NAME"] == "Boss &lt;b&gt;" and "Name updated" in sent[-1][1])
+    reply = types.SimpleNamespace(id=99, from_user=types.SimpleNamespace(id=8494050002, first_name="Rex"), sender_chat=None)
+    await cp.add_sudo(None, cmd("/addadmin", reply=reply))
+    t("/addadmin as a reply uses their Telegram name", udata[8494050002]["SUDO"] is True and udata[8494050002]["PANEL_NAME"] == "Rex")
+    await cp.remove_sudo(None, cmd("/rmadmin 8494050001")); t("/rmadmin removes", udata[8494050001]["SUDO"] is False)
+    await cp.remove_sudo(None, cmd("/rmadmin 7")); t("/rmadmin cannot remove the owner", "config.py" in sent[-1][1])
+    await cp.authorize(None, cmd("/adduser Ann 8494050003")); t("/adduser Name ID", udata[8494050003]["AUTH"] is True and udata[8494050003]["PANEL_NAME"] == "Ann")
+    await cp.unauthorize(None, cmd("/rmuser 8494050003")); t("/rmuser", udata[8494050003]["AUTH"] is False)
     await click("adm 7 close"); t("close deletes panel", getattr(m, "deleted", False))
 asyncio.run(main())
 print("ALL PASS" if ok else "SOME FAILED")

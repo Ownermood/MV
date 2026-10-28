@@ -1,7 +1,15 @@
 from time import time
 
+from html import escape
+
+from pyrogram.enums import ChatType
+
 from .. import user_data
+from ..core.tg_client import TgClient
 from ..helper.ext_utils.bot_utils import update_user_ldata, new_task
+from ..helper.telegram_helper.bot_commands import BotCommands
+from ..helper.telegram_helper.emoji import e
+from ..helper.telegram_helper.rich_name import split_name_and_id
 from ..helper.ext_utils.db_handler import database
 from ..helper.telegram_helper.message_utils import send_message
 
@@ -44,114 +52,125 @@ def _get_blacklist_info(bl_value):
     return False, None
 
 
+async def _target(message):
+    """(name html, chat/user id, topic id) from '/cmd Name ID', '/cmd ID|topic',
+    '/cmd @username' or a reply; id is None when nothing usable was given."""
+    name, ref = split_name_and_id(message)
+    if ref.startswith("@"):
+        try:
+            found = await TgClient.bot.get_users(ref)
+        except Exception:
+            try:
+                found = await TgClient.bot.get_chat(ref)
+            except Exception:
+                return name, None, None
+        return name or escape(getattr(found, "first_name", "") or ""), found.id, None
+    if ref:
+        chat, _, topic = ref.partition("|")
+        return name, int(chat), int(topic) if topic.isdigit() else None
+    reply = message.reply_to_message
+    if reply and reply.id != message.message_thread_id:
+        who = reply.from_user or reply.sender_chat
+        default = escape(getattr(who, "first_name", None) or getattr(who, "title", "") or "")
+        return name or default, who.id, None
+    return name, None, None
+
+
+def _usage(cmd, what):
+    return (
+        f"{e('info')} <b>How to use /{cmd}</b>\n"
+        f"<blockquote><code>/{cmd} Name UserID</code>\n"
+        f"e.g. <code>/{cmd} Wifu 8494053059</code>\n"
+        f"or reply to their message with <code>/{cmd} Name</code></blockquote>\n"
+        f"<i>The name is optional and may contain premium emoji. {what}</i>"
+    )
+
+
 @new_task
 async def authorize(_, message):
-    msg = message.text.split()
-    thread_id = None
-    if len(msg) > 1:
-        if "|" in msg[1]:
-            chat_id, thread_id = list(map(int, msg[1].split("|")))
-        else:
-            chat_id = int(msg[1].strip())
-    elif (
-        reply_to := message.reply_to_message
-    ) and reply_to.id != message.message_thread_id:
-        chat_id = (reply_to.from_user or reply_to.sender_chat).id
-    else:
+    """/adduser: allow a user, or a group (no ID in a group = this group)."""
+    from .admin_panel import allow_user
+
+    name, chat_id, thread_id = await _target(message)
+    if chat_id is None:
+        if message.chat.type == ChatType.PRIVATE:
+            return await send_message(message, _usage(BotCommands.AuthorizeCommand[0], "They can then use the bot anywhere."))
         if message.is_topic_message:
             thread_id = message.message_thread_id
         chat_id = message.chat.id
-    if chat_id in user_data and user_data[chat_id].get("AUTH"):
-        if (
-            thread_id is not None
-            and thread_id in user_data[chat_id].get("thread_ids", [])
-            or thread_id is None
-        ):
-            msg = "Already Authorized!"
-        else:
-            if "thread_ids" in user_data[chat_id]:
-                user_data[chat_id]["thread_ids"].append(thread_id)
-            else:
-                user_data[chat_id]["thread_ids"] = [thread_id]
-            msg = "Authorized"
+    data = user_data.get(chat_id, {})
+    if data.get("AUTH") and (thread_id is None or thread_id in data.get("thread_ids", [])):
+        if name and chat_id > 0:
+            update_user_ldata(chat_id, "PANEL_NAME", name)
+            await database.update_user_data(chat_id)
+        return await send_message(message, f"{e('done')} Already allowed.")
+    if data.get("AUTH") and thread_id is not None:
+        user_data[chat_id].setdefault("thread_ids", []).append(thread_id)
+        await database.update_user_data(chat_id)
     else:
-        update_user_ldata(chat_id, "AUTH", True)
         if thread_id is not None:
             update_user_ldata(chat_id, "thread_ids", [thread_id])
-        await database.update_user_data(chat_id)
-        msg = "Authorized"
-    await send_message(message, msg)
+        await allow_user(chat_id, name if chat_id > 0 else "")
+    who = "This group" if chat_id < 0 else f"<b>{name or chat_id}</b>"
+    await send_message(message, f"{e('done')} {who} can use the bot now.")
 
 
 @new_task
 async def unauthorize(_, message):
-    msg = message.text.split()
-    thread_id = None
-    if len(msg) > 1:
-        if "|" in msg[1]:
-            chat_id, thread_id = list(map(int, msg[1].split("|")))
-        else:
-            chat_id = int(msg[1].strip())
-    elif (
-        reply_to := message.reply_to_message
-    ) and reply_to.id != message.message_thread_id:
-        chat_id = (reply_to.from_user or reply_to.sender_chat).id
-    else:
+    """/rmuser: remove a user, a group, or one topic of a group."""
+    from .admin_panel import disallow_user
+
+    _, chat_id, thread_id = await _target(message)
+    if chat_id is None:
+        if message.chat.type == ChatType.PRIVATE:
+            return await send_message(message, _usage(BotCommands.UnAuthorizeCommand[0], "They can then no longer use the bot."))
         if message.is_topic_message:
             thread_id = message.message_thread_id
         chat_id = message.chat.id
-    if chat_id in user_data and user_data[chat_id].get("AUTH"):
-        if thread_id and thread_id in user_data[chat_id].get("thread_ids", []):
-            user_data[chat_id]["thread_ids"].remove(thread_id)
-            if not user_data[chat_id].get("thread_ids"):
-                update_user_ldata(chat_id, "AUTH", False)
-        else:
-            update_user_ldata(chat_id, "AUTH", False)
-        await database.update_user_data(chat_id)
-        msg = "Unauthorized"
-    else:
-        msg = "Already Unauthorized!"
-    await send_message(message, msg)
+    data = user_data.get(chat_id, {})
+    if not data.get("AUTH"):
+        return await send_message(message, f"{e('info')} Not allowed anyway.")
+    if thread_id and thread_id in data.get("thread_ids", []):
+        data["thread_ids"].remove(thread_id)
+        if data["thread_ids"]:
+            await database.update_user_data(chat_id)
+            return await send_message(message, f"{e('done')} Topic removed.")
+    await disallow_user(chat_id)
+    await send_message(message, f"{e('done')} Removed. They can no longer use the bot.")
 
 
 @new_task
 async def add_sudo(_, message):
-    id_ = ""
-    msg = message.text.split()
-    if len(msg) > 1:
-        id_ = int(msg[1].strip())
-    elif reply_to := message.reply_to_message:
-        id_ = (reply_to.from_user or reply_to.sender_chat).id
-    if id_:
-        if id_ in user_data and user_data[id_].get("SUDO"):
-            msg = "Already Sudo!"
-        else:
-            update_user_ldata(id_, "SUDO", True)
-            await database.update_user_data(id_)
-            msg = "Promoted as Sudo"
-    else:
-        msg = "Give ID or Reply To message of whom you want to Promote."
-    await send_message(message, msg)
+    """/addadmin Name ID (or reply): make someone an admin; they get a DM."""
+    from .admin_panel import add_admin
+
+    name, user_id, _ = await _target(message)
+    if user_id is None or user_id <= 0:
+        return await send_message(message, _usage(BotCommands.AddSudoCommand[0], "They should /start the bot first to get the DM."))
+    if user_data.get(user_id, {}).get("SUDO"):
+        if name:
+            update_user_ldata(user_id, "PANEL_NAME", name)
+            await database.update_user_data(user_id)
+            return await send_message(message, f"{e('done')} Already an admin. Name updated to <b>{name}</b>.")
+        return await send_message(message, f"{e('done')} Already an admin.")
+    await add_admin(user_id, name)
+    await send_message(message, f"{e('party')} <b>{name or user_id}</b> is now an admin. They got a DM.")
 
 
 @new_task
 async def remove_sudo(_, message):
-    id_ = ""
-    msg = message.text.split()
-    if len(msg) > 1:
-        id_ = int(msg[1].strip())
-    elif reply_to := message.reply_to_message:
-        id_ = (reply_to.from_user or reply_to.sender_chat).id
-    if id_:
-        if id_ in user_data and user_data[id_].get("SUDO"):
-            update_user_ldata(id_, "SUDO", False)
-            await database.update_user_data(id_)
-            msg = "Demoted"
-        else:
-            msg = "Already Not Sudo! Sudo users added from config must be removed from config."
-    else:
-        msg = "Give ID or Reply To message of whom you want to remove from Sudo"
-    await send_message(message, msg)
+    """/rmadmin ID (or reply): remove an admin; they get a DM."""
+    from .admin_panel import remove_admin
+
+    _, user_id, _ = await _target(message)
+    if user_id is None:
+        return await send_message(message, _usage(BotCommands.RmSudoCommand[0], "The name is not needed here."))
+    if await remove_admin(user_id):
+        return await send_message(message, f"{e('done')} Admin removed. They got a DM.")
+    await send_message(
+        message,
+        f"{e('info')} Not an admin here. The owner, and admins listed in config.py, can only be changed in config.py.",
+    )
 
 
 @new_task

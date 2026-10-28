@@ -552,7 +552,7 @@ def get_bot_commands():
         "GallerydlLeech": "[link] Leech gallery-dl supported image/media sites",
         "Clone": "[link] Clone files/folders to GDrive",
         "RcloneFm": "Rclone file manager: browse, storage, trash, rename, delete",
-        "Admin": "Admin panel: welcome, start buttons, broadcast (sudo)",
+        "Admin": "Admin panel: welcome, start buttons, broadcast, admins (admins)",
         "UserSet": "User personal settings",
         "ForceStart": "[gid/reply] Force start from queued task",
         "Count": "[link] Count no. of files/folders in GDrive",
@@ -565,11 +565,11 @@ def get_bot_commands():
         "Rss": "User RSS Management Settings",
         "CancelAll": "Cancel all Tasks on the Bot",
         "Help": "Detailed help usage of the WZ Bot",
-        "BotSet": "[SUDO] Bot Management Settings",
-        "Log": "[SUDO] Get Bot Logs for Internal Working",
-        "Memory": "[SUDO] Memory usage, caches and an allocation profiler",
-        "Restart": "[SUDO] Reboot bot",
-        "RestartSessions": "[SUDO] Reboot User Sessions",
+        "BotSet": "[ADMIN] Bot Management Settings",
+        "Log": "[ADMIN] Get Bot Logs for Internal Working",
+        "Memory": "[ADMIN] Memory usage, caches and an allocation profiler",
+        "Restart": "[ADMIN] Reboot bot",
+        "RestartSessions": "[ADMIN] Reboot User Sessions",
     }
 
     commands = static_commands.copy()
@@ -642,7 +642,7 @@ def get_help_string():
             )
         elif key == "Admin":
             help_lines.append(
-                f"{cmd_str}: Admin panel — welcome text/image, start buttons, broadcast, premium emoji (Only Owner & Sudo)."
+                f"{cmd_str}: Admin panel — welcome text/image, start buttons, broadcast, premium emoji (Owner & Admins)."
             )
         elif key == "RcloneFm":
             help_lines.append(
@@ -654,7 +654,7 @@ def get_help_string():
             )
         elif key == "Delete":
             help_lines.append(
-                f"{cmd_str} [drive_url]: Delete file/folder from Google Drive (Only Owner & Sudo)."
+                f"{cmd_str} [drive_url]: Delete file/folder from Google Drive (Owner & Admins)."
             )
         elif key == "UserSet":
             help_lines.append(f"{cmd_str} [query]: Users settings.")
@@ -682,29 +682,29 @@ def get_help_string():
             )
         elif key == "Ping":
             help_lines.append(
-                f"{cmd_str}: Check how long it takes to Ping the Bot (Only Owner & Sudo)."
+                f"{cmd_str}: Check how long it takes to Ping the Bot (Owner & Admins)."
             )
         elif key == "Authorize":
             help_lines.append(
-                f"{cmd_str}: Authorize a chat or a user to use the bot (Only Owner & Sudo)."
+                f"{cmd_str} Name UserID: Let a user (or, inside a group, that group) use the bot (Owner & Admins)."
             )
         elif key == "UnAuthorize":
             help_lines.append(
-                f"{cmd_str}: Unauthorize a chat or a user to use the bot (Only Owner & Sudo)."
+                f"{cmd_str} UserID: Stop a user (or, inside a group, that group) from using the bot (Owner & Admins)."
             )
         elif key == "Users":
-            help_lines.append(f"{cmd_str}: show users settings (Only Owner & Sudo).")
+            help_lines.append(f"{cmd_str}: show users settings (Owner & Admins).")
         elif key == "AddSudo":
-            help_lines.append(f"{cmd_str}: Add sudo user (Only Owner).")
+            help_lines.append(f"{cmd_str} Name UserID: Make someone an admin, e.g. /addadmin Wifu 8494053059 (Owner only).")
         elif key == "RmSudo":
-            help_lines.append(f"{cmd_str}: Remove sudo users (Only Owner).")
+            help_lines.append(f"{cmd_str} UserID: Remove an admin (Owner only).")
         elif key == "BlackList":
             help_lines.append(
-                f"{cmd_str}: Blacklist a user from using the bot (Only Owner & Sudo)."
+                f"{cmd_str}: Blacklist a user from using the bot (Owner & Admins)."
             )
         elif key == "RmBlackList":
             help_lines.append(
-                f"{cmd_str}: Remove a user from blacklist (Only Owner & Sudo)."
+                f"{cmd_str}: Remove a user from blacklist (Owner & Admins)."
             )
         elif key == "AddImage":
             help_lines.append(
@@ -714,11 +714,11 @@ def get_help_string():
             help_lines.append(f"{cmd_str}: View and manage the image gallery.")
         elif key == "Restart":
             help_lines.append(
-                f"{cmd_str}: Restart and update the bot (Only Owner & Sudo)."
+                f"{cmd_str}: Restart and update the bot (Owner & Admins)."
             )
         elif key == "Log":
             help_lines.append(
-                f"{cmd_str}: Get a log file of the bot. Handy for getting crash reports (Only Owner & Sudo)."
+                f"{cmd_str}: Get a log file of the bot. Handy for getting crash reports (Owner & Admins)."
             )
         elif key == "Shell":
             help_lines.append(f"{cmd_str}: Run shell commands (Only Owner).")

@@ -24,6 +24,7 @@ from ..helper.telegram_helper.message_utils import (
     send_message,
 )
 from ..helper.telegram_helper.prompt import STOP, PromptUnreachable, ask_in_pm
+from ..helper.telegram_helper.rich_name import name_plain, split_name_and_id
 from ..helper.telegram_helper.tg_utils import chat_info
 from .broadcast import run_broadcast
 from .services import ensure_admin_menu, start_home, start_photo
@@ -271,7 +272,12 @@ async def _grp_page(uid, note=""):
 
 
 def _name(cid):
+    """Stored name as safe HTML (may hold premium emoji)."""
     return user_data.get(cid, {}).get("PANEL_NAME", "")
+
+
+def _short(cid):
+    return (name_plain(_name(cid)) or str(cid))[:18]
 
 
 def _admins():
@@ -312,7 +318,7 @@ async def _acc_page(uid, note=""):
 async def _admins_page(uid, note=""):
     rows = []
     for i, (cid, src) in enumerate(_admins()):
-        name = escape(_name(cid)) or ("Owner" if src == "owner" else "Admin")
+        name = _name(cid) or ("Owner" if src == "owner" else "Admin")
         tag = {"owner": "owner", "config": "from config", "panel": "admin"}[src]
         mark = e("gem") if src == "owner" else e("users")
         rows.append(f"{mark} <b>{name}</b> · <code>{cid}</code> · <i>{tag}</i>")
@@ -325,9 +331,8 @@ async def _admins_page(uid, note=""):
     if owner:
         for i, (cid, src) in enumerate(_admins()):
             if src == "panel":
-                short = (_name(cid) or str(cid))[:18]
-                _btn(b, uid, "edit", f"Rename {short}", "adm_name", cid)
-                _btn(b, uid, "remove", f"Remove {short}", "adm_rm", cid)
+                _btn(b, uid, "edit", f"Rename {_short(cid)}", "adm_name", cid)
+                _btn(b, uid, "remove", f"Remove {_short(cid)}", "adm_rm", cid)
         _btn(b, uid, "add", "Add Admin", "adm_add", position="f_body")
     _back(b, uid, "acc")
     return text, b.build_menu(2)
@@ -336,7 +341,7 @@ async def _admins_page(uid, note=""):
 async def _usr_page(uid, note=""):
     users = _users()
     rows = "\n".join(
-        f"{e('star')} <b>{escape(_name(cid)) or 'User'}</b> · <code>{cid}</code>" for cid in users
+        f"{e('star')} <b>{_name(cid) or 'User'}</b> · <code>{cid}</code>" for cid in users
     ) or "<i>None yet.</i>"
     text = f"""{e("star")} <b>Allowed Users</b>
 {LINE}
@@ -344,8 +349,7 @@ async def _usr_page(uid, note=""):
 {rows}{note}"""
     b = ButtonMaker()
     for cid in users:
-        short = (_name(cid) or str(cid))[:18]
-        _btn(b, uid, "remove", f"Remove {short}", "usr_rm", cid)
+        _btn(b, uid, "remove", f"Remove {_short(cid)}", "usr_rm", cid)
     _btn(b, uid, "add", "Add User", "usr_add", position="f_body")
     _back(b, uid, "acc")
     return text, b.build_menu(2)
@@ -372,13 +376,12 @@ async def _ask_person(uid, what):
     )
     given = ""
     if person is None:
-        ref = (reply.text or "").strip()
-        if not ref:
+        if not (reply.text or "").strip():
             return None, "Send an ID, @username or a forwarded message."
-        # "Wifu 8494053059": name first, the ID or @username last
-        if " " in ref:
-            given, ref = ref.rsplit(None, 1)
-            given = given.strip()[:32]
+        # "Wifu 🌸 8494053059": name (premium emoji kept) first, ID or @username last
+        given, ref = split_name_and_id(reply, skip_words=0)
+        if not ref:
+            return None, "Put the user ID or @username at the end, like <code>Wifu 8494053059</code>."
         numeric = ref.lstrip("-").isdigit()
         try:
             person = await TgClient.bot.get_users(int(ref) if numeric else ref)
@@ -395,13 +398,54 @@ async def _ask_person(uid, what):
 async def _ask_name(uid, default):
     await send_message(
         uid,
-        f"{e('edit')} Send a custom name for them, or /skip to use <b>{escape(default or 'their Telegram name')}</b>.",
+        f"{e('edit')} Send a name for them (premium emoji welcome), or /skip to use <b>{default or 'their Telegram name'}</b>.",
     )
     reply = await _wait_pm(uid)
     text = (getattr(reply, "text", "") or "").strip() if reply else ""
     if not text or text.startswith("/"):
         return default
-    return text[:32]
+    name, _ = split_name_and_id(reply, skip_words=0)
+    return name or default
+
+
+async def add_admin(cid, name=""):
+    """Make cid an admin with an optional name (HTML, premium emoji kept) and DM them."""
+    if name:
+        update_user_ldata(cid, "PANEL_NAME", name)
+    await _set_admin(cid, True)
+    await _tell(
+        cid,
+        f"{e('party')} <b>You are now an admin</b> of <b>Mirror Leech Villan Bot</b>!\n"
+        f"<blockquote>{e('gem')} Tag: <b>{_name(cid) or 'Admin'}</b>\n"
+        f"{e('users')} Added by the owner</blockquote>\n"
+        f"{e('gear')} Open /admin for the admin panel. All commands are in your menu now.",
+    )
+
+
+async def remove_admin(cid):
+    """False when cid is the owner, from config, or not an admin."""
+    if cid == Config.OWNER_ID or not user_data.get(cid, {}).get("SUDO"):
+        return False
+    await _set_admin(cid, False)
+    await _tell(cid, f"{e('info')} You are <b>no longer an admin</b> of <b>Mirror Leech Villan Bot</b>.")
+    return True
+
+
+async def allow_user(cid, name=""):
+    if name:
+        update_user_ldata(cid, "PANEL_NAME", name)
+    update_user_ldata(cid, "AUTH", True)
+    if Config.DATABASE_URL:
+        await database.update_user_data(cid)
+
+
+async def disallow_user(cid):
+    if not user_data.get(cid, {}).get("AUTH"):
+        return False
+    update_user_ldata(cid, "AUTH", False)
+    if Config.DATABASE_URL:
+        await database.update_user_data(cid)
+    return True
 
 
 async def _tell(cid, text):
@@ -612,22 +656,12 @@ async def admin_panel_cb(_, query):
             return await _show(msg, uid, page, _note(False, err))
         cid, tg_name, name = found
         if not name:
-            name = await _ask_name(uid, tg_name)
-        update_user_ldata(cid, "PANEL_NAME", name)
+            name = await _ask_name(uid, escape(tg_name))
         if action == "adm_add":
-            await _set_admin(cid, True)
-            await _tell(
-                cid,
-                f"{e('party')} <b>You are now an admin</b> of <b>Mirror Leech Villan Bot</b>!\n"
-                f"<blockquote>{e('gem')} Tag: <b>{escape(name or tg_name or 'Admin')}</b>\n"
-                f"{e('users')} Added by the owner</blockquote>\n"
-                f"{e('gear')} Open /admin for the admin panel. All commands are in your menu now.",
-            )
+            await add_admin(cid, name)
         else:
-            update_user_ldata(cid, "AUTH", True)
-            if Config.DATABASE_URL:
-                await database.update_user_data(cid)
-        return await _show(msg, uid, page, _note(True, f"{escape(name or str(cid))} added."))
+            await allow_user(cid, name)
+        return await _show(msg, uid, page, _note(True, f"{name or cid} added."))
     if action in ("adm_rm", "adm_name", "usr_rm"):
         try:
             cid = int(arg)
@@ -636,11 +670,7 @@ async def admin_panel_cb(_, query):
         if action == "adm_rm":
             if cid == Config.OWNER_ID or not user_data.get(cid, {}).get("SUDO"):
                 return await _show(msg, uid, "admins")
-            await _set_admin(cid, False)
-            await _tell(
-                cid,
-                f"{e('info')} You are <b>no longer an admin</b> of <b>Mirror Leech Villan Bot</b>.",
-            )
+            await remove_admin(cid)
             return await _show(msg, uid, "admins", _note(True, "Admin removed."))
         if action == "adm_name":
             await edit_message(msg, f"{e('edit')} <i>Waiting for the new name in private chat…</i>")
@@ -649,10 +679,7 @@ async def admin_panel_cb(_, query):
             if Config.DATABASE_URL:
                 await database.update_user_data(cid)
             return await _show(msg, uid, "admins", _note(True, "Name saved."))
-        if user_data.get(cid, {}).get("AUTH"):
-            update_user_ldata(cid, "AUTH", False)
-            if Config.DATABASE_URL:
-                await database.update_user_data(cid)
+        if await disallow_user(cid):
             return await _show(msg, uid, "usr", _note(True, "User removed."))
         return await _show(msg, uid, "usr")
     # force join
