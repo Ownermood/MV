@@ -545,18 +545,53 @@ async def get_buttons(key=None, edit_type=None, edit_mode=False):
     return msg, buttons.build_menu(2, lb_cols=8)
 
 
+_RED, _GREEN, _BLUE = ButtonStyle.DANGER, ButtonStyle.SUCCESS, ButtonStyle.PRIMARY
+# button text -> (icon, shown text, colour); colour None keeps the page's own
+_PAINT = {
+    "Back": ("back", "Back", _BLUE),
+    "Close": ("close", "Close", _RED),
+    "Add New": ("add", "Add New", None),
+    "Add new key": ("add", "Add New Key", None),
+    "Create New File": ("add", "Create New File", None),
+    "Add/Delete File": ("edit", "Add / Delete File", None),
+    "Aria2c Settings": ("bolt", "Aria2c Settings", None),
+    "Qbit Settings": ("download", "Qbit Settings", None),
+    "Sabnzbd Settings": ("server", "Sabnzbd Settings", None),
+    "Servers": ("server", "Servers", None),
+    "Default": ("back", "Default", None),
+    "Reset": ("trash", "Reset", _RED),
+    "Edit": ("edit", "Edit", None),
+    "Edit Value": ("edit", "Edit Value", None),
+    "View": ("search", "View", None),
+    "View Value": ("search", "View Value", None),
+    "Empty String": ("remove", "Empty", _RED),
+    "Empty": ("remove", "Empty", _RED),
+    "Limit Settings": ("chart", "Limit Settings", None),
+    "On/Off Settings": ("on", "Features On/Off", None),
+    "Remove Server": ("trash", "Remove Server", _RED),
+    "Stop Edit": ("blocked", "Stop Edit", _RED),
+    "Stop Invoke File": ("blocked", "Stop", _RED),
+    "Sync Qbittorrent": ("satellite", "Sync qBittorrent", None),
+    "Sync Sabnzbd": ("satellite", "Sync SABnzbd", None),
+    "Yes!": ("done", "Yes", _GREEN),
+    "No": ("close", "No", _RED),
+    "⫷": ("prev", "Prev", None),
+    "⫸": ("next", "Next", None),
+}
+
+
 def _paint(buttons):
-    """Same colours on every page: Back blue, Close red, plain buttons blue."""
+    """Same look on every page: icons, Back blue, Close red, the rest blue."""
     for row in buttons.buttons.values():
         for b in row:
-            name = b.text.strip()
-            if name in ("Back", "Close"):
-                ico = name.lower()
-                b.text = btn_label(ico, name)
+            if (look := _PAINT.get(b.text.strip())) and b.icon_custom_emoji_id is None:
+                ico, text, style = look
+                b.text = btn_label(ico, text)
                 b.icon_custom_emoji_id = icon(ico)
-                b.style = ButtonStyle.DANGER if name == "Close" else ButtonStyle.PRIMARY
-            elif b.style in (None, ButtonStyle.DEFAULT):
-                b.style = ButtonStyle.PRIMARY
+                if style:
+                    b.style = style
+            if b.style in (None, ButtonStyle.DEFAULT):
+                b.style = _BLUE
 
 
 async def update_buttons(message, key=None, edit_type=None, edit_mode=False):
@@ -1068,11 +1103,12 @@ async def update_private_file(_, message, pre_message, key, new_file=False):
             await load_config()
         if "@github.com" in Config.UPSTREAM_REPO:
             buttons = ButtonMaker()
-            msg = "Push to UPSTREAM_REPO ?"
+            msg = f"{e('upload')} <b>Push to UPSTREAM_REPO?</b>"
             buttons.data_button(
                 "Yes!", f"botset push {file_name}", style=ButtonStyle.SUCCESS
             )
             buttons.data_button("No", "botset close", style=ButtonStyle.DANGER)
+            _paint(buttons)
             await send_message(message, msg, buttons.build_menu(2))
         else:
             await delete_message(message)

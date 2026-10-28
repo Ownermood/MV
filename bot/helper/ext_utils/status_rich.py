@@ -1,12 +1,10 @@
-# Rich message version of the status card (Telegram rich messages): key/value
-# tables, dividers and coloured buttons inside the text. Built from the same
+# Rich message version of the status card (Telegram rich messages): the same
+# lines as the HTML card plus dividers and coloured buttons inside the text. Built from the same
 # data as the HTML card; callers fall back to HTML when sending this fails.
 from pyrogram import raw
 from pyrogram.types import (
     InputRichBlockDivider,
     InputRichBlockParagraph,
-    InputRichBlockTable,
-    InputRichBlockTableCell,
     InputRichMessage,
 )
 
@@ -33,22 +31,27 @@ def _emoji(name):
     return _plain(char)
 
 
-def _button(text, data, style):
+def _button(icon_name, text, data, style):
     return raw.types.TextButton(
-        text=_plain(text),
+        text=_concat(_emoji(icon_name), _plain(f" {text}")),
         type=raw.types.InlineButtonTypeCallback(data=data.encode()),
         style=raw.types.RichButtonStyle(**{f"bg_{style}": True}),
     )
 
 
-def _cell(text, bold=False, right=False):
-    return InputRichBlockTableCell(
-        _concat(_bold(text) if bold else _plain(text)), align_right=right or None
-    )
+def _lines(parts):
+    """Join lists of rich text pieces with line breaks in one paragraph."""
+    out = []
+    for i, line in enumerate(parts):
+        if i:
+            out.append(_plain("\n"))
+        out.extend(line)
+    return _concat(*out)
 
 
-def build_rich_status(header, tasks, stats):
-    """header: text line; tasks: dicts from get_readable_message; stats: (key, value)."""
+def build_rich_status(header, tasks, stats, nav):
+    """header: text; tasks: dicts from get_readable_message; stats: two lines of
+    (key, value) pairs; nav: (icon, text, callback data) buttons under the card."""
     blocks = [
         InputRichBlockParagraph(
             _concat(_emoji("list"), _plain(" "), raw.types.TextMarked(text=_bold(header)))
@@ -56,46 +59,47 @@ def build_rich_status(header, tasks, stats):
     ]
     for task in tasks:
         blocks.append(InputRichBlockDivider())
-        blocks.append(
-            InputRichBlockParagraph(
-                _concat(_emoji(task["icon"]), _plain(" "), _bold(task["title"]))
-            )
-        )
-        name = task["name"] + (f"\n↳ {task['sub']}" if task["sub"] else "")
-        blocks.append(InputRichBlockParagraph(raw.types.TextItalic(text=_plain(name))))
+        lines = [
+            [_emoji(task["icon"]), _plain(" "), _bold(task["title"])],
+            [raw.types.TextItalic(text=_plain(task["name"]))],
+        ]
+        if task["sub"]:
+            lines.append([raw.types.TextItalic(text=_plain(f"↳ {task['sub']}"))])
         if task["bar"]:
-            blocks.append(
-                InputRichBlockParagraph(_concat(_plain(f"{task['bar']} "), _bold(task["pct"])))
-            )
-        rows = [[_cell(k, bold=True), _cell(v, right=True)] for k, v in task["fields"]]
+            lines.append([_plain(f"{task['bar']} "), _bold(task["pct"])])
+        lines += [[_bold(f"{k}: "), _plain(v)] for k, v in task["fields"]]
         user_name, user_id = task["user"]
-        rows.append(
+        lines.append(
             [
-                _cell("User", bold=True),
-                InputRichBlockTableCell(
-                    raw.types.TextUrl(
-                        text=_plain(f"{user_name} ({user_id})"),
-                        url=f"tg://user?id={user_id}",
-                        webpage_id=0,
-                    ),
-                    align_right=True,
+                _bold("User: "),
+                raw.types.TextUrl(
+                    text=_plain(user_name), url=f"tg://user?id={user_id}", webpage_id=0
                 ),
+                _plain(f" ({user_id})"),
             ]
         )
-        blocks.append(InputRichBlockTable(title=_plain(""), rows=rows, compact=True))
-        actions = [_button("Cancel Task", f"rcan {task['gid']}", "danger")]
+        blocks.append(InputRichBlockParagraph(_lines(lines)))
+        actions = [_button("close", "Cancel Task", f"rcan {task['gid']}", "danger")]
         if task["select"]:
-            actions += [_plain("  "), _button("Select Files", f"rsel {task['gid']}", "primary")]
+            actions += [
+                _plain("  "),
+                _button("folder", "Select Files", f"rsel {task['gid']}", "primary"),
+            ]
         blocks.append(InputRichBlockParagraph(_concat(*actions)))
     blocks.append(InputRichBlockDivider())
-    blocks.append(
-        InputRichBlockParagraph(_concat(_emoji("chart"), _plain(" "), _bold("Bot Stats")))
-    )
-    blocks.append(
-        InputRichBlockTable(
-            title=_plain(""),
-            rows=[[_cell(k, bold=True), _cell(v, right=True)] for k, v in stats],
-            compact=True,
-        )
-    )
+    stat_lines = [[_emoji("chart"), _plain(" "), _bold("Bot Stats")]]
+    for row in stats:
+        line = []
+        for i, (k, v) in enumerate(row):
+            if i:
+                line.append(_plain(" | "))
+            line += [_bold(f"{k}: "), _plain(v)]
+        stat_lines.append(line)
+    blocks.append(InputRichBlockParagraph(_lines(stat_lines)))
+    buttons = []
+    for i, (icon_name, text, data) in enumerate(nav):
+        if i:
+            buttons.append(_plain("  "))
+        buttons.append(_button(icon_name, text, data, "primary"))
+    blocks.append(InputRichBlockParagraph(_concat(*buttons)))
     return InputRichMessage(blocks=blocks)

@@ -538,7 +538,7 @@ async def _send_status(msg, text, buttons):
                 chat_id=msg.chat.id,
                 text=str(text),
                 rich_text=text.rich,
-                reply_markup=buttons,
+                reply_markup=buttons if text.keep_markup else None,
                 reply_parameters=ReplyParameters(message_id=msg.id),
                 disable_notification=True,
             )
@@ -556,7 +556,7 @@ async def _edit_status(message, text, buttons, is_rich):
                 message_id=message.id,
                 text=str(text),
                 rich_text=text.rich,
-                reply_markup=buttons,
+                reply_markup=buttons if text.keep_markup else None,
             )
         except Exception as err:
             if "MESSAGE_NOT_MODIFIED" in str(err):

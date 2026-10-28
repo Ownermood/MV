@@ -226,6 +226,7 @@ class StatusText(str):
     """Status HTML; .rich holds the rich message version when one was built."""
 
     rich = None
+    keep_markup = False
 
 
 UPLOAD_NAMES = {"Leech": "Telegram", "GDrive": "Google Drive", "RClone": "Rclone"}
@@ -407,11 +408,24 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
         if pages > 1:
             header += f"  ·  Page {page_no}/{pages}"
         try:
+            nav = [("bolt", "Refresh", f"status {sid} ref")]
+            if len(tasks) > STATUS_LIMIT:
+                nav = [
+                    ("prev", "Prev", f"status {sid} pre"),
+                    *nav,
+                    ("next", "Next", f"status {sid} nex"),
+                ]
             msg.rich = build_rich_status(
                 header,
                 rich_tasks,
-                [("CPU", f"{cpu}%"), ("RAM", f"{ram}%"), ("Free", free_text), ("Uptime", uptime)],
+                [
+                    [("CPU", f"{cpu}%"), ("FREE", free_text)],
+                    [("RAM", f"{ram}%"), ("UPTIME", uptime)],
+                ],
+                nav,
             )
+            # filters/step buttons have no in-text version: keep the keyboard then
+            msg.keep_markup = tasks_no > 20 or status != "All"
         except Exception as err:
             from ... import LOGGER
 
