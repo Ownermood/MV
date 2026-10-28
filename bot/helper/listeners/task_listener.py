@@ -62,7 +62,7 @@ from ..mirror_leech_utils.status_utils.yt_status import YtStatus
 from ..mirror_leech_utils.upload_utils.telegram_uploader import TelegramUploader
 from ..mirror_leech_utils.youtube_utils.youtube_upload import YouTubeUpload
 from ..telegram_helper.button_build import ButtonMaker
-from ..telegram_helper.emoji import e, icon, label
+from ..telegram_helper.emoji import e
 from ..telegram_helper.message_utils import (
     delete_links,
     delete_message,
@@ -98,17 +98,6 @@ def _chat_ref(value):
     if not value:
         return None
     return int(value) if value.lstrip("-").isdigit() else value
-
-
-def _dm_button():
-    buttons = ButtonMaker()
-    buttons.url_button(
-        label("mail", "Open DM"),
-        f"https://t.me/{TgClient.BNAME}",
-        style=ButtonStyle.SUCCESS,
-        icon=icon("mail"),
-    )
-    return buttons.build_menu(1)
 
 
 class TaskListener(TaskConfig):
@@ -565,10 +554,8 @@ class TaskListener(TaskConfig):
                 msg += f"\n<b>Corrupted:</b> {mime_type}"
             msg += f"\n<b>User:</b> {self.tag}</blockquote>\n"
 
-            if self.bot_pm:
-                pmsg = msg + f"{e('mail')} <i>Files sent to your DM.</i>"
-                if self.is_super_chat:
-                    await send_message(self.message, pmsg, _dm_button())
+            # with BOT_PM the summary and files go to the user's DM only;
+            # the group stays clean
 
             if not files and not self.is_super_chat:
                 await send_message(self.message, msg)
@@ -672,11 +659,7 @@ class TaskListener(TaskConfig):
                     msg += f"\n<b>Path:</b> <code>{rclone_path}</code>"
                 button = None
             msg += f"\n<b>User:</b> {self.tag}</blockquote>\n"
-            group_msg = (
-                msg + f"{e('mail')} <i>Cloud links sent to your DM.</i>\n"
-                if self.bot_pm and self.is_super_chat
-                else msg
-            )
+            group_msg = msg
 
             if multi_link_msg:
                 group_msg += multi_link_msg + "\n"
@@ -688,7 +671,8 @@ class TaskListener(TaskConfig):
             if hasattr(Config, "MIRROR_LOG_ID") and Config.MIRROR_LOG_ID:
                 await send_message(Config.MIRROR_LOG_ID, msg, button)
 
-            await send_message(self.message, group_msg, button)
+            if not (self.bot_pm and self.is_super_chat):
+                await send_message(self.message, group_msg, button)
         if self.seed:
             await clean_target(self.up_dir)
             async with queue_dict_lock:
