@@ -3,12 +3,12 @@ from googleapiclient.http import MediaIoBaseDownload
 from io import FileIO
 from json import loads as json_loads
 from logging import getLogger
-from os import makedirs, path as ospath
+from os import makedirs, path as ospath, remove
 from tenacity import (
     retry,
     wait_exponential,
     stop_after_attempt,
-    retry_if_exception_type,
+    retry_if_not_exception_type,
     RetryError,
 )
 
@@ -19,6 +19,10 @@ from ...mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
 LOGGER = getLogger(__name__)
 
 
+class DownloadBlocked(Exception):
+    """The file's owner turned off downloading for viewers (cannotDownloadFile)."""
+
+
 class GoogleDriveDownload(GoogleDriveHelper):
     def __init__(self, listener, path):
         self.listener = listener
@@ -26,6 +30,9 @@ class GoogleDriveDownload(GoogleDriveHelper):
         self._path = path
         super().__init__()
         self.is_downloading = True
+        # names of files in a folder that the owner blocked from download
+        self.skipped = []
+        listener.skipped_files = self.skipped
 
     def download(self):
         file_id = self.get_id_from_url(self.listener.link, self.listener.user_id)
@@ -35,6 +42,10 @@ class GoogleDriveDownload(GoogleDriveHelper):
             meta = self.get_file_metadata(file_id)
             if meta.get("mimeType") == self.G_DRIVE_DIR_MIME_TYPE:
                 self._download_folder(file_id, self._path, self.listener.name)
+                if self.skipped and not self._downloaded:
+                    raise DownloadBlocked(
+                        "The Drive owner has blocked downloads for every file in this folder."
+                    )
             else:
                 makedirs(self._path, exist_ok=True)
                 self._download_file(
@@ -90,14 +101,26 @@ class GoogleDriveDownload(GoogleDriveHelper):
                 tuple(self.listener.excluded_extensions)
             ):
                 self.sa_count = 1
-                self._download_file(file_id, path, filename, mime_type)
+                try:
+                    self._download_file(file_id, path, filename, mime_type)
+                    self._downloaded += 1
+                except DownloadBlocked:
+                    # skip only this file; the rest of the folder still downloads
+                    LOGGER.info(f"Download blocked by owner, skipped: {filename}")
+                    self.skipped.append(filename)
+                    try:
+                        remove(f"{path}/{filename.replace('/', '')}")
+                    except OSError:
+                        pass
             if self.listener.is_cancelled:
                 break
+
+    _downloaded = 0
 
     @retry(
         wait=wait_exponential(multiplier=2, min=3, max=6),
         stop=stop_after_attempt(3),
-        retry=retry_if_exception_type(Exception),
+        retry=retry_if_not_exception_type(DownloadBlocked),
     )
     def _download_file(self, file_id, path, filename, mime_type, export=False):
         if export:
@@ -141,6 +164,14 @@ class GoogleDriveDownload(GoogleDriveHelper):
                         .get("errors")[0]
                         .get("reason")
                     )
+                    if reason == "cannotDownloadFile":
+                        fh.close()
+                        self.proc_bytes -= self.file_processed_bytes
+                        self.file_processed_bytes = 0
+                        self.status = None
+                        raise DownloadBlocked(
+                            "The Drive owner has blocked downloads for this file."
+                        )
                     if "fileNotDownloadable" in reason and "document" in mime_type:
                         fh.close()
                         self.proc_bytes -= self.file_processed_bytes

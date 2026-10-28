@@ -45,6 +45,7 @@ CHECKS = [
     ("status card", "check_status_card.py", [REPO], None),
     ("video split into parts", "check_split.py", [REPO, "WORK"], None),
     ("bot settings sections", "check_bsettings_sections.py", [REPO], None),
+    ("drive: skip blocked files", "check_gdrive_skip.py", [REPO], None),
 ]
 
 failed = []

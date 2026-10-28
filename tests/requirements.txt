@@ -4,3 +4,5 @@ niquests
 aiofiles
 aioshutil
 wzgram
+google-api-python-client
+tenacity

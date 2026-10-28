@@ -483,6 +483,13 @@ class TaskListener(TaskConfig):
             f"\n<b>Time:</b> {get_readable_time(time() - self.message.date.timestamp())}"
             f"\n<b>Upload:</b> {upload_text(self.mode)}"
         )
+        if skipped := getattr(self, "skipped_files", None):
+            names = ", ".join(escape(n) for n in skipped[:10])
+            more = f" +{len(skipped) - 10} more" if len(skipped) > 10 else ""
+            msg += (
+                f"\n{e('warn')} <b>Skipped:</b> {len(skipped)} file(s), download blocked by the owner"
+                f"\n<i>{names}{more}</i>"
+            )
         LOGGER.info(f"Task Done: {self.name}")
         if self.is_tg_clone:
             stats = self.clone_stats
