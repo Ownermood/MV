@@ -19,6 +19,7 @@ FILELION_API = ""
 STREAMWISH_API = ""
 ALLDEBRID_API_KEY = ""
 TORBOX_API_KEY = ""  # used by the -tb flag
+TLDV_TOKEN = ""  # tl;dv bearer token for private meeting recordings
 ALLDEBRID_NO_SEED_TIMEOUT = 180
 EXCLUDED_EXTENSIONS = ""
 INC_TASK_NOTIFY = False

@@ -29,6 +29,7 @@ from ..helper.ext_utils.links_utils import (
     is_gdrive_id,
     is_gdrive_link,
     is_mega_link,
+    is_tldv_link,
     is_magnet,
     is_rclone_path,
     is_telegram_link,
@@ -40,6 +41,9 @@ from ..helper.mirror_leech_utils.download_utils.alldebrid_resolver import (
     alldebrid_resolve,
     alldebrid_resolve_magnet,
     alldebrid_resolve_torrent,
+)
+from ..helper.mirror_leech_utils.download_utils.tldv_downloader import (
+    add_tldv_download,
 )
 from ..helper.mirror_leech_utils.download_utils.torbox_resolver import (
     torbox_resolve,
@@ -518,6 +522,7 @@ class Mirror(TaskListener):
             and file_ is None
             and not is_gdrive_id(self.link)
             and not is_mega_link(self.link)
+            and not is_tldv_link(self.link)
         ):
             if self.is_alldebrid:
                 try:
@@ -593,6 +598,8 @@ class Mirror(TaskListener):
             await add_rclone_download(self, f"{path}/")
         elif is_gdrive_link(self.link) or is_gdrive_id(self.link):
             await add_gd_download(self, path)
+        elif isinstance(self.link, str) and is_tldv_link(self.link):
+            await add_tldv_download(self, path, headers)
         elif is_mega_link(self.link):
             await add_mega_download(self, f"{path}/")
         else:

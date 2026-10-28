@@ -156,6 +156,7 @@ DEFAULT_DESP = {
     "DEBRID_LINK_API": "Debrid-link.com API key for premium hoster support.",
     "ALLDEBRID_API_KEY": "AllDebrid API key, used by the -ad flag to unlock links/magnets.",
     "TORBOX_API_KEY": "TorBox API key, used by the -tb flag to unlock links/magnets.",
+    "TLDV_TOKEN": "tl;dv bearer token used to download meeting recordings. Shared by all users unless they pass their own with -h.",
     "ALLDEBRID_NO_SEED_TIMEOUT": "Seconds a -ad magnet may stall with no seeders before aborting. 0 = no limit. Default: 180.",
     "DISABLE_TORRENTS": "Disable all torrent downloads. Default: False.",
     "DISABLE_LEECH": "Disable all leech (download to Telegram) tasks. Default: False.",
@@ -328,6 +329,7 @@ OWNER_ONLY_VARS = PROTECTED_VARS | {
     "ENABLE_TELEMETRY",
     "ALLDEBRID_API_KEY",
     "TORBOX_API_KEY",
+    "TLDV_TOKEN",
     "DEBRID_LINK_API",
     "FILELION_API",
     "GOFILE_API",
@@ -911,7 +913,7 @@ async def edit_variable(_, message, pre_message, key):
         value = str(value)
     elif key == "DEBRID_LINK_API":
         value = str(value)
-    elif key in ("ALLDEBRID_API_KEY", "TORBOX_API_KEY"):
+    elif key in ("ALLDEBRID_API_KEY", "TORBOX_API_KEY", "TLDV_TOKEN"):
         value = str(value)
     elif key == "ALLDEBRID_NO_SEED_TIMEOUT":
         try:

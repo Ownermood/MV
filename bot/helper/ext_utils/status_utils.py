@@ -51,6 +51,7 @@ class EngineStatus:
         self.STATUS_MEGA = f"MegaSDK v{ver.get('mega', 'N/A')}"
         self.STATUS_YTDLP = f"yt-dlp v{ver.get('yt-dlp', 'N/A')}"
         self.STATUS_GALLERYDL = f"gallery-dl v{ver.get('gallery-dl', 'N/A')}"
+        self.STATUS_TLDV = "tl;dv"
         self.STATUS_FFMPEG = f"ffmpeg v{ver.get('ffmpeg', 'N/A')}"
         self.STATUS_7Z = f"7z v{ver.get('7z', 'N/A')}"
         self.STATUS_RCLONE = f"RClone v{ver.get('rclone', 'N/A')}"

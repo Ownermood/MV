@@ -338,6 +338,13 @@ If both -ad and -tb are given, AllDebrid is used.
 
 Requires <code>TORBOX_API_KEY</code> in the bot configuration."""
 
+tldv_arg = """<b>tl;dv Recordings</b>
+
+/cmd https://tldv.io/app/meetings/ID
+Downloads a tl;dv meeting recording as MP4. Private meetings need
+<code>TLDV_TOKEN</code> in the bot config, or your own token:
+/cmd link -h authorization: Bearer YOUR_TOKEN"""
+
 seedr_arg = """<b>Seedr Cloud</b>: -seedr
 
 /cmd magnet -seedr
@@ -485,6 +492,7 @@ MIRROR_HELP_DICT = {
     "Metadata": metadata,
     "AllDebrid": alldebrid_arg,
     "TorBox": torbox_arg,
+    "tl;dv": tldv_arg,
     "Seedr": seedr_arg,
 }
 

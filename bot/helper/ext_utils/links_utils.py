@@ -43,6 +43,14 @@ def is_mega_link(url: str):
     )
 
 
+def is_tldv_link(url: str):
+    return bool(
+        re_match(
+            r"^https?://(?:app\.)?tldv\.io/(?:app/meetings|watch)/[a-zA-Z0-9]+", url
+        )
+    )
+
+
 def is_mega_folder_link(link: str) -> bool:
     if not link:
         return False

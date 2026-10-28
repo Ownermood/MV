@@ -76,7 +76,7 @@ async def get_download_status(download):
     eng = download.engine
     speed = (
         download.speed()
-        if eng.startswith(("WzPyro", "yt-dlp", "gallery-dl", "RClone", "Google-API"))
+        if eng.startswith(("WzPyro", "yt-dlp", "gallery-dl", "tl;dv", "RClone", "Google-API"))
         else 0
     )
     return (
