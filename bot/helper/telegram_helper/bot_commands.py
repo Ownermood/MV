@@ -3,6 +3,9 @@ from ...core.plugin_manager import get_plugin_manager
 
 
 class BotCommands:
+    # full command menu for owner/sudo chats, filled at startup (core.handlers)
+    ADMIN_MENU = []
+    admin_menu_set = set()
     StartCommand = "start"
     LoginCommand = "login"
 

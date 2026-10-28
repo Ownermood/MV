@@ -578,10 +578,13 @@ async def add_handlers():
         admins = {Config.OWNER_ID, *sudo_users} | {
             uid for uid, data in user_data.items() if uid > 0 and data.get("SUDO")
         }
+        BotCommands.ADMIN_MENU = _menu(BOT_COMMANDS.items())
         for uid in admins:
             try:
                 await TgClient.bot.set_bot_commands(
-                    _menu(BOT_COMMANDS.items()), scope=BotCommandScopeChat(uid)
+                    BotCommands.ADMIN_MENU, scope=BotCommandScopeChat(uid)
                 )
+                BotCommands.admin_menu_set.add(uid)
             except Exception as err:
-                LOGGER.warning(f"Admin command menu not set for {uid}: {err}")
+                # a new bot cannot target a chat it has never seen; set on their next /start or /admin
+                LOGGER.info(f"Admin command menu for {uid} will be set when they message the bot ({err})")

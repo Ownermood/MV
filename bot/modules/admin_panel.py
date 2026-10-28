@@ -25,7 +25,7 @@ from ..helper.telegram_helper.message_utils import (
 from ..helper.telegram_helper.prompt import STOP, PromptUnreachable, ask_in_pm
 from ..helper.telegram_helper.tg_utils import chat_info
 from .broadcast import run_broadcast
-from .services import start_home, start_photo
+from .services import ensure_admin_menu, start_home, start_photo
 
 RED = ButtonStyle.DANGER
 LINE = "━━━━━━━━━━━━━━━━━━"
@@ -286,6 +286,7 @@ def _note(ok, msg):
 @new_task
 async def admin_panel(_, message):
     uid = message.from_user.id
+    await ensure_admin_menu(uid)
     text, markup = await _home(uid)
     await send_message(message, text, markup)
 

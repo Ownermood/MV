@@ -69,7 +69,9 @@ def fsub_chats():
     return [{"id": str(c["id"]), "name": c.get("name", ""), "link": c.get("link", "")} for c in Cfg.FORCE_SUB_CHATS] + [{"id": i, "name": "", "link": ""} for i in Cfg.FORCE_SUB_IDS.split()]
 mod("bot.helper.telegram_helper.force_join", fsub_chats=fsub_chats, clear_join_cache=lambda: cleared.append(1))
 mod("bot.helper.telegram_helper.tg_utils", chat_info=chat_info)
-mod("bot.modules.services", start_home=lambda u: ("HOME", []), start_photo=lambda: "IMAGES")
+menu_calls = []
+async def ensure_admin_menu(uid): menu_calls.append(uid)
+mod("bot.modules.services", start_home=lambda u: ("HOME", []), start_photo=lambda: "IMAGES", ensure_admin_menu=ensure_admin_menu)
 for name, path in (("bot.helper.telegram_helper.emoji", "bot/helper/telegram_helper/emoji.py"), ("bot.modules.admin_panel", "bot/modules/admin_panel.py")):
     spec = importlib.util.spec_from_file_location(name, f"{REPO}/{path}")
     m = importlib.util.module_from_spec(spec); sys.modules[name] = m; spec.loader.exec_module(m)
@@ -94,6 +96,7 @@ class Q:
 async def main():
     m = Msg(); await ap.admin_panel(None, types.SimpleNamespace(from_user=types.SimpleNamespace(id=7)))
     home_text, home_rows = sent[-1][1], None
+    t("opening /admin sets the admin command menu", menu_calls == [7])
     t("home shows users/tasks", "Users:</b> <code>3</code>" in home_text and "Running tasks:</b> <code>1</code>" in home_text)
     async def click(data, uid=7):
         q = Q(data, m, uid); await ap.admin_panel_cb(None, q); return q

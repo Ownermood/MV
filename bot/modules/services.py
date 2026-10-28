@@ -6,7 +6,7 @@ from re import match
 
 from aiofiles import open as aiopen
 from cloudscraper import create_scraper
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup
 
 from .. import LOGGER, user_data
 from ..core.config_manager import Config
@@ -243,9 +243,24 @@ async def guide_cb(_, query):
     await edit_message(query.message, text, markup)
 
 
+async def ensure_admin_menu(user_id):
+    """Set the full command menu in an owner/sudo chat once the bot knows the chat."""
+    if user_id in BotCommands.admin_menu_set or not BotCommands.ADMIN_MENU:
+        return
+    try:
+        await TgClient.bot.set_bot_commands(
+            BotCommands.ADMIN_MENU, scope=BotCommandScopeChat(user_id)
+        )
+        BotCommands.admin_menu_set.add(user_id)
+    except Exception as err:
+        LOGGER.warning(f"Admin command menu not set for {user_id}: {err}")
+
+
 @new_task
 async def start(_, message):
     userid = message.from_user.id
+    if await CustomFilters.sudo(_, message):
+        await ensure_admin_menu(userid)
     lang = Language()
     buttons = ButtonMaker()
     _start_links(buttons, lang)
