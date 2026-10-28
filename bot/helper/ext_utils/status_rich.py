@@ -1,6 +1,7 @@
 # Rich message version of the status card (Telegram rich messages): the same
-# lines as the HTML card plus dividers and coloured buttons inside the text. Built from the same
-# data as the HTML card; callers fall back to HTML when sending this fails.
+# lines as the HTML card plus dividers and coloured buttons inside the text.
+# No premium emoji here: Telegram drops them when a rich message is edited in a
+# supergroup (tdlib/telegram-bot-api#904). Callers fall back to HTML on errors.
 from pyrogram import raw
 from pyrogram.types import (
     InputRichBlockDivider,
@@ -8,8 +9,6 @@ from pyrogram.types import (
     InputRichMessage,
 )
 
-from ...core.config_manager import Config
-from ..telegram_helper.emoji import EMOJI
 
 
 def _plain(text):
@@ -22,13 +21,6 @@ def _concat(*parts):
 
 def _bold(text):
     return raw.types.TextBold(text=_plain(text))
-
-
-def _emoji(name):
-    char, emoji_id = EMOJI[name]
-    if Config.PREMIUM_EMOJI and emoji_id:
-        return raw.types.TextCustomEmoji(document_id=int(emoji_id), alt=char)
-    return _plain(char)
 
 
 def _button(icon_name, text, data, style):
@@ -56,13 +48,13 @@ def build_rich_status(header, tasks, stats, nav):
     (key, value) pairs; nav: (icon, text, callback data) buttons under the card."""
     blocks = [
         InputRichBlockParagraph(
-            _concat(_emoji("list"), _plain(" "), raw.types.TextMarked(text=_bold(header)))
+            _concat(raw.types.TextMarked(text=_bold(header)))
         )
     ]
     for task in tasks:
         blocks.append(InputRichBlockDivider())
         lines = [
-            [_emoji(task["icon"]), _plain(" "), _bold(task["title"])],
+            [_bold(task["title"])],
             [raw.types.TextItalic(text=_plain(task["name"]))],
         ]
         if task["sub"]:
@@ -89,7 +81,7 @@ def build_rich_status(header, tasks, stats, nav):
             ]
         blocks.append(InputRichBlockParagraph(_concat(*actions)))
     blocks.append(InputRichBlockDivider())
-    stat_lines = [[_emoji("chart"), _plain(" "), _bold("Bot Stats")]]
+    stat_lines = [[_bold("Bot Stats")]]
     for row in stats:
         line = []
         for i, (k, v) in enumerate(row):
