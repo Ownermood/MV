@@ -87,7 +87,9 @@ SECTIONS = {
 
 def editable_keys():
     """Every variable that opens with editvar (DISABLE_* live in Module Settings)."""
-    return [k for k in Config.get_all() if not k.startswith("DISABLE_")]
+    return [
+        k for k in Config.get_all() if not k.startswith("DISABLE_") and k != "DEFAULTS_VERSION"
+    ]
 
 
 def section_keys(sid):

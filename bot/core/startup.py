@@ -258,6 +258,32 @@ async def load_settings():
             LOGGER.info("RSS data has been imported from MongoDB")
 
 
+# switched on once per bot (DEFAULTS_VERSION); changes made later in the panel stay
+RECOMMENDED_DEFAULTS = {
+    "BOT_PM": True,
+    "MEDIA_GROUP": True,
+    "EQUAL_SPLITS": True,
+    "LEECH_SECTIONS": True,
+    "PREMIUM_EMOJI": True,
+    "RICH_STATUS": True,
+    "INC_TASK_NOTIFY": True,
+}
+DEFAULTS_VERSION = 1
+
+
+async def apply_recommended_defaults():
+    if Config.DEFAULTS_VERSION >= DEFAULTS_VERSION:
+        return
+    for key, value in RECOMMENDED_DEFAULTS.items():
+        Config.set(key, value)
+    Config.DEFAULTS_VERSION = DEFAULTS_VERSION
+    if database.db is not None:
+        await database.update_config(
+            {**RECOMMENDED_DEFAULTS, "DEFAULTS_VERSION": DEFAULTS_VERSION}
+        )
+    LOGGER.info(f"Recommended settings switched on: {', '.join(RECOMMENDED_DEFAULTS)}")
+
+
 async def save_settings():
     if database.db is None:
         return

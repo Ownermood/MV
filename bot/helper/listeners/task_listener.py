@@ -476,7 +476,7 @@ class TaskListener(TaskConfig):
             names = ", ".join(escape(n) for n in skipped[:10])
             more = f" +{len(skipped) - 10} more" if len(skipped) > 10 else ""
             msg += (
-                f"\n{e('warn')} <b>Skipped:</b> {len(skipped)} file(s), download blocked by the owner"
+                f"\n{e('warn')} <b>Skipped:</b> {len(skipped)} file(s) that Google does not allow to download"
                 f"\n<i>{names}{more}</i>"
             )
         LOGGER.info(f"Task Done: {self.name}")
@@ -754,11 +754,16 @@ class TaskListener(TaskConfig):
                 f"{e('warn')} <b>Task Stopped</b>\n"
                 f"<blockquote><b>Reason:</b> {escape(short_reason(error))}\n{details}</blockquote>"
             )
-            if log_chat := _chat_ref(Config.ERROR_LOG_CHAT):
-                await send_message(
+            log_chat = _chat_ref(Config.ERROR_LOG_CHAT)
+            if log_chat and log_chat not in (self.message.chat.id, self.message.chat.username):
+                sent = await send_message(
                     log_chat, f"{full}\n<a href='{self.message.link}'>Task message</a>"
                     if self.is_super_chat else full,
                 )
+                if isinstance(sent, str):
+                    LOGGER.warning(f"ERROR_LOG_CHAT {log_chat} not reachable (make the bot admin there): {sent}")
+            elif log_chat:
+                LOGGER.warning("ERROR_LOG_CHAT is the task's own chat; full errors are not posted there")
             if self.bot_pm and self.is_super_chat:
                 await send_message(self.user_id, full)
 

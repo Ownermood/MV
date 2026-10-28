@@ -77,6 +77,8 @@ class Config:
     PREMIUM_EMOJI = True
     RICH_STATUS = True
     LEECH_SECTIONS = True
+    # bumped when new recommended defaults are applied once (core.startup)
+    DEFAULTS_VERSION = 0
     INSTADL_API = ""
     IMDB_TEMPLATE = ""
     IMAGES = []

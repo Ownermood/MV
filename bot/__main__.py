@@ -41,6 +41,7 @@ async def main():
     from asyncio import gather
 
     from .core.startup import (
+        apply_recommended_defaults,
         load_configurations,
         load_settings,
         save_settings,
@@ -51,6 +52,7 @@ async def main():
     )
 
     await load_settings()
+    await apply_recommended_defaults()
 
     if not Config.DISABLE_NZB:
         from bot import _sabnzbd_key, _update_sabnzbd_ini, sabnzbd_client

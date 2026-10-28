@@ -59,8 +59,8 @@ class Resp(dict):
     reason = "Forbidden"
 
 
-def blocked():
-    body = json.dumps({"error": {"errors": [{"reason": "cannotDownloadFile"}]}}).encode()
+def blocked(reason="cannotDownloadFile"):
+    body = json.dumps({"error": {"errors": [{"reason": reason}]}}).encode()
     return HttpError(Resp({"content-type": "application/json"}), body)
 
 
@@ -69,7 +69,12 @@ class Downloader:
 
     def next_chunk(self):
         calls.append(self.fid)
-        if FILES[self.fid].get("blocked"):
+        if isinstance(self.fid, tuple):  # export to PDF
+            if not FILES[self.fid[1]].get("exportable"):
+                raise blocked("exportFormatNotSupported")
+        elif FILES[self.fid].get("gfile"):
+            raise blocked("fileNotDownloadable")
+        elif FILES[self.fid].get("blocked"):
             raise blocked()
         self.fh.write(b"data")
         return None, True
@@ -81,6 +86,7 @@ dl.MediaIoBaseDownload = Downloader
 class Service:
     def files(self): return self
     def get_media(self, fileId, **k): return fileId
+    def export_media(self, fileId, mimeType): return ("export", fileId)
 
 
 def item(fid, name): return {"id": fid, "name": name, "mimeType": "video/mp4"}
@@ -91,6 +97,11 @@ FILES = {
     "a": {}, "b": {"blocked": True}, "c": {},
     "alldir": {"mime": Helper.G_DRIVE_DIR_MIME_TYPE, "items": [item("b", "2.mp4")]},
     "one": {"mime": "video/mp4", "blocked": True},
+    "gdir": {"mime": Helper.G_DRIVE_DIR_MIME_TYPE, "items": [
+        {"id": "s", "name": "Marks", "mimeType": "application/vnd.google-apps.spreadsheet"},
+        {"id": "f", "name": "Quiz", "mimeType": "application/vnd.google-apps.form"},
+        item("a", "1.mp4")]},
+    "s": {"gfile": True, "exportable": True}, "f": {"gfile": True},
 }
 
 
@@ -122,4 +133,10 @@ with tempfile.TemporaryDirectory() as work:
     lst = Listener("one"); lst.name = "one.mp4"; errors.clear()
     dl.GoogleDriveDownload(lst, work).download()
     t("single blocked file -> clear error", not lst.done and errors and "blocked downloads for this file" in errors[-1])
+with tempfile.TemporaryDirectory() as work:
+    lst = Listener("gdir"); lst.name = "G"; errors.clear()
+    dl.GoogleDriveDownload(lst, work).download()
+    files = sorted(os.listdir(f"{work}/G"))
+    t(f"Google Sheet exported as PDF, Form skipped, task goes on {files}", files == ["1.mp4", "Marks.pdf"] and lst.done and not errors)
+    t("unexportable Google file listed as skipped", lst.skipped_files == ["Quiz"])
 print("ALL PASS" if ok else "SOME FAILED")

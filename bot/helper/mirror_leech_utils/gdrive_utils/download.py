@@ -19,6 +19,13 @@ from ...mirror_leech_utils.gdrive_utils.helper import GoogleDriveHelper
 LOGGER = getLogger(__name__)
 
 
+def _drop(path):
+    try:
+        remove(path)
+    except OSError:
+        pass
+
+
 class DownloadBlocked(Exception):
     """The file's owner turned off downloading for viewers (cannotDownloadFile)."""
 
@@ -108,10 +115,6 @@ class GoogleDriveDownload(GoogleDriveHelper):
                     # skip only this file; the rest of the folder still downloads
                     LOGGER.info(f"Download blocked by owner, skipped: {filename}")
                     self.skipped.append(filename)
-                    try:
-                        remove(f"{path}/{filename.replace('/', '')}")
-                    except OSError:
-                        pass
             if self.listener.is_cancelled:
                 break
 
@@ -164,16 +167,30 @@ class GoogleDriveDownload(GoogleDriveHelper):
                         .get("errors")[0]
                         .get("reason")
                     )
+                    if export:
+                        # a Google file that cannot be exported either (Forms, too big)
+                        fh.close()
+                        _drop(fh.name)
+                        self.proc_bytes -= self.file_processed_bytes
+                        self.file_processed_bytes = 0
+                        self.status = None
+                        raise DownloadBlocked(f"Google file could not be exported ({reason}).")
                     if reason == "cannotDownloadFile":
                         fh.close()
+                        _drop(fh.name)
                         self.proc_bytes -= self.file_processed_bytes
                         self.file_processed_bytes = 0
                         self.status = None
                         raise DownloadBlocked(
                             "The Drive owner has blocked downloads for this file."
                         )
-                    if "fileNotDownloadable" in reason and "document" in mime_type:
+                    # Docs, Sheets, Slides, Drawings: download them as PDF
+                    if "fileNotDownloadable" in reason and (
+                        "document" in mime_type
+                        or mime_type.startswith("application/vnd.google-apps.")
+                    ):
                         fh.close()
+                        _drop(fh.name)  # the empty original; the PDF replaces it
                         self.proc_bytes -= self.file_processed_bytes
                         self.file_processed_bytes = 0
                         self.status = None
