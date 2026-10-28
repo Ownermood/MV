@@ -20,6 +20,20 @@ def valid_url(link):
     return text
 
 
+# longest label (in characters) that still shows whole on a phone when a row
+# has this many buttons
+_ROW_FIT = {1: 10**6, 2: 17, 3: 11, 4: 8, 5: 6}
+
+
+def _fits(count):
+    return _ROW_FIT.get(count, 4)
+
+
+def _width(btn):
+    # a premium icon takes about two characters of room
+    return len(btn.text or "") + (2 if btn.icon_custom_emoji_id else 0)
+
+
 class ButtonMaker:
     def __init__(self):
         self.buttons = {
@@ -64,7 +78,20 @@ class ButtonMaker:
 
     def build_menu(self, b_cols=1, h_cols=8, fb_cols=2, lb_cols=2, f_cols=8):
         def chunk(lst, n):
-            return [lst[i : i + n] for i in range(0, len(lst), n)]
+            # up to n buttons a row, but a label too long to show whole next
+            # to the others gets a row of its own (Telegram cuts it with "…")
+            rows, row = [], []
+            for btn in lst:
+                cand = row + [btn]
+                if len(cand) <= n and max(map(_width, cand)) <= _fits(len(cand)):
+                    row = cand
+                    continue
+                if row:
+                    rows.append(row)
+                row = [btn]
+            if row:
+                rows.append(row)
+            return rows
 
         menu = chunk(self.buttons["default"], b_cols)
         menu = (
