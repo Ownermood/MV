@@ -4,7 +4,7 @@ REPO = sys.argv[1]
 def mod(name, **attrs):
     m = types.ModuleType(name); m.__path__ = []; m.__dict__.update(attrs); sys.modules[name] = m; return m
 class Cfg:
-    DATABASE_URL = "mongodb://x"; START_TEXT = ""; START_IMAGE = ""; START_LINKS = {}; START_GUIDE = True
+    OWNER_ID = 7; DATABASE_URL = "mongodb://x"; START_TEXT = ""; START_IMAGE = ""; START_LINKS = {}; START_GUIDE = True
     PREMIUM_EMOJI = False; USE_IMAGES = False; IMAGES = []; FORCE_SUB_CHATS = []; FORCE_SUB_IDS = ""
     @classmethod
     def set(cls, k, v): setattr(cls, k, v)
@@ -36,6 +36,12 @@ class Bot:
         if "Premium emoji test" in text and Bot.premium_ok == "error": raise RuntimeError("BUTTON_ICON_INVALID")
         ents = [types.SimpleNamespace(custom_emoji_id="1")] if Bot.premium_ok is True else []
         return Msg(text, entities=ents)
+    cmd_scopes_deleted = []
+    async def get_users(self, ref):
+        people = {123: "Tom", "@tom": "Tom"}
+        if ref not in people: raise ValueError("USER_NOT_FOUND")
+        return types.SimpleNamespace(id=123, first_name=people[ref], is_bot=False)
+    async def delete_bot_commands(self, scope=None): Bot.cmd_scopes_deleted.append(scope.chat_id)
 bot = Bot()
 class BM:
     def __init__(s): s.rows = []
@@ -46,7 +52,7 @@ bc_calls = []
 async def run_broadcast(rply, reply_to, forwarded=False, quietly=False): bc_calls.append((rply, quietly)); return "bc9"
 udata = {}
 def update_user_ldata(cid, k, v): udata.setdefault(cid, {})[k] = v
-mod("bot", bot_start_time=0, task_dict={1: 1}, auth_chats={-1009: []}, user_data=udata); mod("bot.core"); mod("bot.core.config_manager", Config=Cfg)
+mod("bot", sudo_users=[55], bot_start_time=0, task_dict={1: 1}, auth_chats={-1009: []}, user_data=udata); mod("bot.core"); mod("bot.core.config_manager", Config=Cfg)
 mod("bot.core.tg_client", TgClient=types.SimpleNamespace(bot=bot))
 mod("bot.helper"); mod("bot.helper.ext_utils")
 mod("bot.helper.ext_utils.bot_utils", new_task=lambda f: f, update_user_ldata=update_user_ldata); mod("bot.helper.ext_utils.db_handler", database=DB())
@@ -56,6 +62,7 @@ mod("bot.helper.telegram_helper.button_build", ButtonMaker=BM, valid_url=lambda 
 mod("bot.helper.telegram_helper.message_utils", send_message=send_message, edit_message=edit_message, delete_message=delete_message)
 mod("bot.helper.telegram_helper.prompt", STOP="STOP", PromptUnreachable=type("PU", (Exception,), {}), ask_in_pm=ask_in_pm)
 mod("bot.modules"); mod("bot.modules.broadcast", run_broadcast=run_broadcast)
+mod("bot.helper.telegram_helper.bot_commands", BotCommands=types.SimpleNamespace(admin_menu_set={123}))
 class CMS: ADMINISTRATOR = "admin"; OWNER = "owner"; MEMBER = "member"
 import pyrogram.enums as _en
 _en.ChatMemberStatus = CMS
@@ -102,7 +109,7 @@ async def main():
         q = Q(data, m, uid); await ap.admin_panel_cb(None, q); return q
     for prem in (False, True):
         Cfg.PREMIUM_EMOJI = prem
-        for page in ("home", "text", "img", "btns", "bc", "prem", "fj", "grp"):
+        for page in ("home", "text", "img", "btns", "bc", "prem", "fj", "grp", "acc", "admins", "usr"):
             await click(f"adm 7 {page}")
             t(f"page {page} valid (premium={prem})", valid(m.text, m.markup) and all(r[2] in (ap.GREEN, ap.ButtonStyle.PRIMARY, ap.ButtonStyle.DANGER) for r in m.markup) and all(r[2] == ap.ButtonStyle.DANGER for r in m.markup if r[1].endswith(" close")))
     Cfg.PREMIUM_EMOJI = False
@@ -154,6 +161,24 @@ async def main():
     t("config group has no remove button", not any("Remove" in r[0] and "-1009" in r[0] for r in m.markup))
     await click("adm 7 grp_rm -1001"); t("group removed", udata[-1001]["AUTH"] is False)
     pm_queue.append(Msg(text="nope")); await click("adm 7 grp_add"); t("unknown group refused", "can't open" in m.text)
+    # access: admins (owner only) and allowed users
+    pm_queue.extend([Msg(text="123"), Msg(text="Tommy")]); await click("adm 7 adm_add")
+    t("admin added with custom name", udata[123].get("SUDO") is True and udata[123].get("PANEL_NAME") == "Tommy" and 123 in menu_calls)
+    await click("adm 7 admins")
+    t("admins page: owner, config and panel admins", "Tommy" in m.text and "from config" in m.text and "<code>55</code>" in m.text and "owner" in m.text and valid(m.text, m.markup))
+    t("only panel admins have remove buttons", [r[1] for r in m.markup if "adm_rm" in r[1]] == ["adm 7 adm_rm 123"])
+    pm_queue.append(Msg(text="Tom B")); await click("adm 7 adm_name 123"); t("admin renamed", udata[123]["PANEL_NAME"] == "Tom B")
+    sudo_m = Msg(); q = Q("adm 8 adm_add", sudo_m, 8); await ap.admin_panel_cb(None, q)
+    t("sudo cannot add admins", "Only the owner" in sudo_m.text and len(pm_queue) == 0)
+    await click("adm 7 adm_rm 7"); t("owner cannot be removed", "removed" not in m.text)
+    await click("adm 7 adm_rm 123")
+    t("admin removed and their command menu cleared", udata[123]["SUDO"] is False and 123 in Bot.cmd_scopes_deleted)
+    fwd = Msg(text=""); fwd.forward_from = types.SimpleNamespace(id=456, first_name="Ann", is_bot=False)
+    pm_queue.extend([fwd, Msg(text="/skip")]); await click("adm 7 usr_add")
+    t("user allowed from a forward, Telegram name kept", udata[456].get("AUTH") is True and udata[456]["PANEL_NAME"] == "Ann")
+    await click("adm 7 usr"); t("users page lists them", "Ann" in m.text and "<code>456</code>" in m.text and valid(m.text, m.markup))
+    await click("adm 7 usr_rm 456"); t("user removed", udata[456]["AUTH"] is False)
+    pm_queue.append(Msg(text="@nobody")); await click("adm 7 usr_add"); t("unknown user refused", "not found" in m.text)
     await click("adm 7 close"); t("close deletes panel", getattr(m, "deleted", False))
 asyncio.run(main())
 print("ALL PASS" if ok else "SOME FAILED")

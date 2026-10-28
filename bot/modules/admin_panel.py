@@ -6,9 +6,9 @@ from time import time
 from pyrogram.enums import ButtonStyle, ChatMemberStatus
 from pyrogram.filters import private, user
 from pyrogram.handlers import MessageHandler
-from pyrogram.types import Message
+from pyrogram.types import BotCommandScopeChat, Message
 
-from .. import auth_chats, bot_start_time, task_dict, user_data
+from .. import auth_chats, bot_start_time, sudo_users, task_dict, user_data
 from ..core.config_manager import Config
 from ..core.tg_client import TgClient
 from ..helper.ext_utils.bot_utils import new_task, update_user_ldata
@@ -104,12 +104,12 @@ async def _home(uid):
 <blockquote expandable>{e("users")} <b>Users:</b> <code>{users}</code>
 {e("chart")} <b>Running tasks:</b> <code>{len(task_dict)}</code>
 {e("clock")} <b>Uptime:</b> <code>{get_readable_time(time() - bot_start_time)}</code>
-{e("globe")} <b>Allowed groups:</b> <code>{len(_groups())}</code>
+{e("users")} <b>Admins:</b> <code>{len(_admins()) - 1}</code>  ·  {e("globe")} <b>Groups:</b> <code>{len(_groups())}</code>
 {e("key")} <b>Force join chats:</b> <code>{len(fsub_chats())}</code>
 {e("star")} <b>Premium emoji:</b> {_onoff(Config.PREMIUM_EMOJI)}</blockquote>
 <i>Tap a section. Changes apply instantly and are saved.</i>"""
     b = ButtonMaker()
-    _btn(b, uid, "globe", "Allowed Groups", "grp", on=bool(_groups()))
+    _btn(b, uid, "users", "Access", "acc")
     _btn(b, uid, "wave", "Welcome Text", "text")
     _btn(b, uid, "image", "Welcome Image", "img")
     _btn(b, uid, "link", "Start Buttons", "btns")
@@ -262,8 +262,147 @@ async def _grp_page(uid, note=""):
         if not cfg:
             _btn(b, uid, "remove", f"Remove {i}. {cid}", "grp_rm", cid)
     _btn(b, uid, "add", "Add Group", "grp_add", position="f_body")
+    _back(b, uid, "acc")
+    return text, b.build_menu(1)
+
+
+# ---------- access: admins and allowed users ----------
+
+
+def _name(cid):
+    return user_data.get(cid, {}).get("PANEL_NAME", "")
+
+
+def _admins():
+    """(user id, source) for owner, config sudo and panel/command sudo."""
+    found = {Config.OWNER_ID: "owner"}
+    for cid in sudo_users:
+        found.setdefault(cid, "config")
+    for cid, data in user_data.items():
+        if isinstance(cid, int) and cid > 0 and data.get("SUDO"):
+            found.setdefault(cid, "panel")
+    return list(found.items())
+
+
+def _users():
+    return sorted(
+        cid
+        for cid, data in user_data.items()
+        if isinstance(cid, int) and cid > 0 and data.get("AUTH")
+    )
+
+
+async def _acc_page(uid, note=""):
+    text = f"""{e("users")} <b>Access Control</b>
+{LINE}
+<blockquote>Who can manage the bot and who can use it.</blockquote>
+{e("gem")} <b>Owner:</b> <code>{Config.OWNER_ID}</code>
+{e("users")} <b>Admins:</b> <code>{len(_admins()) - 1}</code>
+{e("globe")} <b>Allowed groups:</b> <code>{len(_groups())}</code>
+{e("star")} <b>Allowed users:</b> <code>{len(_users())}</code>{note}"""
+    b = ButtonMaker()
+    _btn(b, uid, "users", "Admins", "admins")
+    _btn(b, uid, "globe", "Allowed Groups", "grp", on=bool(_groups()))
+    _btn(b, uid, "star", "Allowed Users", "usr", on=bool(_users()))
     _back(b, uid)
     return text, b.build_menu(1)
+
+
+async def _admins_page(uid, note=""):
+    rows = []
+    for i, (cid, src) in enumerate(_admins()):
+        name = escape(_name(cid)) or ("Owner" if src == "owner" else "Admin")
+        tag = {"owner": "owner", "config": "from config", "panel": "admin"}[src]
+        mark = e("gem") if src == "owner" else e("users")
+        rows.append(f"{mark} <b>{name}</b> · <code>{cid}</code> · <i>{tag}</i>")
+    owner = uid == Config.OWNER_ID
+    text = f"""{e("users")} <b>Admins</b>
+{LINE}
+<blockquote>Admins can use every command and this panel. Only the owner can add or remove them.</blockquote>
+{chr(10).join(rows)}{note}"""
+    b = ButtonMaker()
+    if owner:
+        for i, (cid, src) in enumerate(_admins()):
+            if src == "panel":
+                short = (_name(cid) or str(cid))[:18]
+                _btn(b, uid, "edit", f"Rename {short}", "adm_name", cid)
+                _btn(b, uid, "remove", f"Remove {short}", "adm_rm", cid)
+        _btn(b, uid, "add", "Add Admin", "adm_add", position="f_body")
+    _back(b, uid, "acc")
+    return text, b.build_menu(2)
+
+
+async def _usr_page(uid, note=""):
+    users = _users()
+    rows = "\n".join(
+        f"{e('star')} <b>{escape(_name(cid)) or 'User'}</b> · <code>{cid}</code>" for cid in users
+    ) or "<i>None yet.</i>"
+    text = f"""{e("star")} <b>Allowed Users</b>
+{LINE}
+<blockquote>These users can use the bot anywhere, also in private chat. Group members do not need to be added here.</blockquote>
+{rows}{note}"""
+    b = ButtonMaker()
+    for cid in users:
+        short = (_name(cid) or str(cid))[:18]
+        _btn(b, uid, "remove", f"Remove {short}", "usr_rm", cid)
+    _btn(b, uid, "add", "Add User", "usr_add", position="f_body")
+    _back(b, uid, "acc")
+    return text, b.build_menu(2)
+
+
+async def _ask_person(uid, what):
+    """(user id, telegram name) from an ID, @username or forwarded message."""
+    sent = await send_message(
+        uid,
+        f"{e('users')} Send the {what}'s user ID, @username, or forward one of their messages.",
+    )
+    if isinstance(sent, str):
+        return None, "Start the bot in private chat first, then try again."
+    reply = await _wait_pm(uid)
+    if reply is None:
+        return None, "Timed out."
+    person = getattr(reply, "forward_from", None) or getattr(
+        getattr(reply, "forward_origin", None), "sender_user", None
+    )
+    if person is None:
+        ref = (reply.text or "").strip()
+        if not ref:
+            return None, "Send an ID, @username or a forwarded message."
+        try:
+            person = await TgClient.bot.get_users(int(ref) if ref.lstrip("-").isdigit() else ref)
+        except Exception:
+            return None, "User not found. They must have started the bot, or use their numeric ID."
+    if getattr(person, "is_bot", False) or person.id <= 0:
+        return None, "That is not a user."
+    return (person.id, person.first_name or ""), None
+
+
+async def _ask_name(uid, default):
+    await send_message(
+        uid,
+        f"{e('edit')} Send a custom name for them, or /skip to use <b>{escape(default or 'their Telegram name')}</b>.",
+    )
+    reply = await _wait_pm(uid)
+    text = (getattr(reply, "text", "") or "").strip() if reply else ""
+    if not text or text.startswith("/"):
+        return default
+    return text[:32]
+
+
+async def _set_admin(cid, on):
+    update_user_ldata(cid, "SUDO", on)
+    if Config.DATABASE_URL:
+        await database.update_user_data(cid)
+    if on:
+        await ensure_admin_menu(cid)
+        return
+    from ..helper.telegram_helper.bot_commands import BotCommands
+
+    BotCommands.admin_menu_set.discard(cid)
+    try:
+        await TgClient.bot.delete_bot_commands(scope=BotCommandScopeChat(cid))
+    except Exception:
+        pass
 
 
 PAGES = {
@@ -275,6 +414,9 @@ PAGES = {
     "fj": _fj_page,
     "grp": _grp_page,
     "prem": _prem_page,
+    "acc": _acc_page,
+    "admins": _admins_page,
+    "usr": _usr_page,
 }
 
 
@@ -436,6 +578,48 @@ async def admin_panel_cb(_, query):
                 await database.update_user_data(cid)
             return await _show(msg, uid, "grp", _note(True, "Group removed."))
         return await _show(msg, uid, "grp")
+    # admins (owner only) and allowed users
+    if action in ("adm_add", "adm_rm", "adm_name") and uid != Config.OWNER_ID:
+        return await _show(msg, uid, "admins", _note(False, "Only the owner can change admins."))
+    if action in ("adm_add", "usr_add"):
+        page, what = ("admins", "admin") if action == "adm_add" else ("usr", "user")
+        await edit_message(msg, f"{e('users')} <i>Waiting for the {what} in private chat…</i>")
+        found, err = await _ask_person(uid, what)
+        if err:
+            return await _show(msg, uid, page, _note(False, err))
+        cid, tg_name = found
+        name = await _ask_name(uid, tg_name)
+        update_user_ldata(cid, "PANEL_NAME", name)
+        if action == "adm_add":
+            await _set_admin(cid, True)
+        else:
+            update_user_ldata(cid, "AUTH", True)
+            if Config.DATABASE_URL:
+                await database.update_user_data(cid)
+        return await _show(msg, uid, page, _note(True, f"{escape(name or str(cid))} added."))
+    if action in ("adm_rm", "adm_name", "usr_rm"):
+        try:
+            cid = int(arg)
+        except ValueError:
+            return await _show(msg, uid, "acc")
+        if action == "adm_rm":
+            if cid == Config.OWNER_ID or not user_data.get(cid, {}).get("SUDO"):
+                return await _show(msg, uid, "admins")
+            await _set_admin(cid, False)
+            return await _show(msg, uid, "admins", _note(True, "Admin removed."))
+        if action == "adm_name":
+            await edit_message(msg, f"{e('edit')} <i>Waiting for the new name in private chat…</i>")
+            name = await _ask_name(uid, _name(cid))
+            update_user_ldata(cid, "PANEL_NAME", name)
+            if Config.DATABASE_URL:
+                await database.update_user_data(cid)
+            return await _show(msg, uid, "admins", _note(True, "Name saved."))
+        if user_data.get(cid, {}).get("AUTH"):
+            update_user_ldata(cid, "AUTH", False)
+            if Config.DATABASE_URL:
+                await database.update_user_data(cid)
+            return await _show(msg, uid, "usr", _note(True, "User removed."))
+        return await _show(msg, uid, "usr")
     # force join
     if action == "fj_add":
         await edit_message(msg, f"{e('key')} <i>Waiting for the channel/group in private chat…</i>")
